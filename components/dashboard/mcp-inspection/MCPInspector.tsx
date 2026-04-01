@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button, TextField, InputGroup } from "@heroui/react";
+import { ThemeSwitch } from "@/components/theme-switch";
+import { useTheme } from "next-themes";
 
 const TABS = ["Tools", "Resources", "Prompts"];
 
@@ -25,6 +28,27 @@ export default function MCPInspector() {
 
   const activeServer = servers.find((s) => s.id === activeServerId) || null;
   const connected = !!activeServer;
+
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
+
+  const LIGHT_C = {
+    bg: "#f6f7fb",
+    surface: "#ffffff",
+    border: "#e6e7eb",
+    borderHover: "#d7d8de",
+    text: "#0b1020",
+    muted: "#6b7280",
+    accent: "#6b46ff",
+    accentHover: "#7c5cff",
+    green: "#16a34a",
+    red: "#dc2626",
+    orange: "#ea580c",
+    cyan: "#0891b2",
+  };
+
+  const colors = isLight ? LIGHT_C : C;
+  const styles = getStyles(colors);
 
   const serverLabel = (s: any) => {
     try {
@@ -301,7 +325,7 @@ export default function MCPInspector() {
               + New
             </button>
             <div style={{ display: 'flex', gap: 8, marginLeft: 12, alignItems: 'center' }}>
-              <label style={{ color: C.muted, fontSize: 12, marginRight: 8 }}>Presets:</label>
+              <label style={{ color: colors.muted, fontSize: 12, marginRight: 8 }}>Presets:</label>
               <select
                 style={styles.serverPresetDropdown}
                 value={selectedPresetId}
@@ -314,13 +338,15 @@ export default function MCPInspector() {
               >
                 <option value="">Choose preset…</option>
                 {PRESET_SERVERS.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id} style={{ color: colors.text, background: colors.surface }}>{p.name}</option>
                 ))}
               </select>
             </div>
           </div>
         </div>
-        <div style={styles.statusDot(connected)} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={styles.statusDot(connected)} />
+        </div>
       </div>
 
       <div style={styles.connectBar}>
@@ -341,25 +367,26 @@ export default function MCPInspector() {
               value={authToken}
               onChange={(e) => setAuthToken(e.target.value)}
             />
-            <button
-              style={styles.connectBtn(connecting || !serverUrl.trim())}
+            <Button
+              className=""
               onClick={connect}
               disabled={connecting || !serverUrl.trim()}
+              style={styles.connectBtn(connecting || !serverUrl.trim())}
             >
               {connecting ? "Connecting…" : "Connect"}
-            </button>
+            </Button>
           </>
         ) : (
           <>
             <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ color: C.muted, fontSize: 12 }}>{activeServer?.url}</div>
+              <div style={{ color: colors.muted, fontSize: 12 }}>{activeServer?.url}</div>
             </div>
-            <button style={styles.connectBtn(false)} onClick={() => fetchTab(activeTab)}>
+            <Button style={styles.connectBtn(false)} onClick={() => fetchTab(activeTab)}>
               Refresh
-            </button>
-            <button style={styles.disconnectBtn} onClick={disconnect}>
+            </Button>
+            <Button variant="secondary" style={styles.disconnectBtn} onClick={disconnect}>
               Remove
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -372,6 +399,8 @@ export default function MCPInspector() {
             {TABS.map((tab) => (
               <button
                 key={tab}
+                role="tab"
+                aria-pressed={activeTab === tab}
                 style={styles.tab(activeTab === tab)}
                 onClick={() => switchTab(tab)}
                 disabled={!connected}
@@ -449,13 +478,13 @@ export default function MCPInspector() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     style={styles.callBtn(calling)}
                     onClick={callTool}
                     disabled={calling}
                   >
                     {calling ? "Running…" : "▶  Run Tool"}
-                  </button>
+                  </Button>
 
                   {callResult && (
                     <>
@@ -484,13 +513,13 @@ export default function MCPInspector() {
       <div style={styles.logPanel}>
         <div style={styles.logHeader}>
           <span>JSON-RPC Log</span>
-          <button style={styles.clearBtn} onClick={() => setLogs([])}>
+          <Button variant="secondary" style={styles.clearBtn} onClick={() => setLogs([])}>
             clear
-          </button>
+          </Button>
         </div>
         <div style={styles.logBody}>
           {(activeServer?.logs || logs).length === 0 && (
-            <span style={{ color: "#444" }}>No activity yet</span>
+            <span style={{ color: colors.muted }}>No activity yet</span>
           )}
           {(activeServer?.logs || logs).map((log: any) => (
             <div key={log.id} style={styles.logEntry(log.type)}>
@@ -519,7 +548,8 @@ const C = {
   cyan: "#22d3ee",
 };
 
-const styles: any = {
+function getStyles(C: any) {
+  return {
   root: {
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
     background: C.bg,
@@ -631,7 +661,7 @@ const styles: any = {
     alignItems: "center",
   },
   serverTab: (active: boolean) => ({
-    background: active ? "#111117" : "transparent",
+    background: active ? C.surface : "transparent",
     color: active ? C.text : C.muted,
     border: `1px solid ${active ? C.accent + "44" : "transparent"}`,
     padding: "6px 8px",
@@ -658,7 +688,7 @@ const styles: any = {
     fontSize: 12,
   },
   serverPresetDropdown: {
-    background: "transparent",
+    background: C.surface,
     color: C.text,
     border: `1px solid ${C.border}`,
     padding: "6px 10px",
@@ -666,11 +696,13 @@ const styles: any = {
     cursor: "pointer",
     fontSize: 12,
     appearance: "none",
+    // ensure readable contrast
+    outline: "none",
   },
   tab: (active: boolean) => ({
     flex: 1,
     padding: "10px 0",
-    background: active ? "#1a1a26" : "transparent",
+    background: active ? C.surface : "transparent",
     border: "none",
     borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
     color: active ? C.text : C.muted,
@@ -701,7 +733,7 @@ const styles: any = {
     display: "block",
     width: "100%",
     textAlign: "left",
-    background: active ? "#1a1a2e" : "transparent",
+    background: active ? C.surface : "transparent",
     border: `1px solid ${active ? C.accent + "44" : "transparent"}`,
     borderRadius: 6,
     padding: "10px 12px",
@@ -789,7 +821,7 @@ const styles: any = {
   logPanel: {
     height: 160,
     borderTop: `1px solid ${C.border}`,
-    background: "#0a0a0c",
+    background: C.surface,
     display: "flex",
     flexDirection: "column",
   },
@@ -838,6 +870,7 @@ const styles: any = {
       : C.muted,
     lineHeight: 1.5,
   }),
-};
+  };
+}
 
-export { styles };
+// styles factory is exported only if needed; module uses it internally
