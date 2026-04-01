@@ -60,7 +60,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2">
             <h2 className="text-2xl font-bold text-default-900">No active agents yet</h2>
             <p className="max-w-md text-default-500 text-lg">
-              Start by discovering and deploying specialized AI agents from our Marketplace.
+              Start by discovering and deploying specialized AI agents from our Agent MarketPlace.
             </p>
           </div>
           <Link href="/dashboard/marketplace">
@@ -69,7 +69,7 @@ export default function DashboardPage() {
               size="lg" 
               className="px-12 font-bold shadow-lg shadow-primary/30 rounded-full"
             >
-              Explore Marketplace
+              Explore Agent MarketPlace
             </Button>
           </Link>
         </section>
@@ -116,12 +116,12 @@ export default function DashboardPage() {
       {agents.length > 0 && (
         <section className="bg-primary/5 rounded-3xl p-8 border border-primary/10 flex flex-col items-center text-center gap-4 mt-8">
           <h2 className="text-2xl font-bold text-default-900">Scale Your Operations</h2>
-          <p className="max-w-md text-default-500">
-            Access specialized AI templates in our Marketplace to automate your repetitive workflows today.
+            <p className="max-w-md text-default-500">
+            Access specialized AI templates in our Agent MarketPlace to automate your repetitive workflows today.
           </p>
           <Link href="/dashboard/marketplace">
             <Button variant="primary" size="lg" className="px-12 font-bold shadow-lg shadow-primary/30 rounded-full">
-              Marketplace
+              Agent MarketPlace
             </Button>
           </Link>
         </section>

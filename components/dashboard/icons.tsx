@@ -50,5 +50,41 @@ export const NotificationsIcon = ({ size = 24, className, fill = "currentColor" 
   </svg>
 );
 
+export const ShieldIcon = ({ size = 24, className, fill = "currentColor" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path fill={fill} d="M12 2l7 4v6c0 5-3.58 9.74-7 10-3.42-.26-7-5-7-10V6l7-4z" />
+    <path fill="#fff" d="M10.5 12.5l1.5 1.5 3-3" opacity="0.15" />
+  </svg>
+);
+
+export const InspectIcon = ({ size = 24, className, fill = "currentColor" }: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <g stroke={fill} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none">
+      <circle cx="9" cy="8" r="3" />
+      <path d="M4 20c1.6-2 4.2-3 6-3s4.4 1 6 3" />
+      <circle cx="17" cy="17" r="3.2" />
+      <path d="M19 19l3 3" />
+    </g>
+  </svg>
+);
+
+export const MCPIcon = ({ size = 24, className, fill = "currentColor" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <g stroke={fill} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none">
+      <rect x="3" y="4" width="18" height="6" rx="1.5" />
+      <rect x="3" y="14" width="10" height="6" rx="1.5" />
+      <path d="M17 15v-2a2 2 0 00-2-2h-1" />
+      <circle cx="19" cy="18" r="1.6" />
+    </g>
+  </svg>
+);
+
 
 

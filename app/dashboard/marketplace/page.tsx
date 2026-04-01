@@ -64,7 +64,7 @@ export default function MarketplacePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <Spinner size="lg" color="accent" />
-        <p className="text-default-500 animate-pulse">Loading marketplace templates...</p>
+        <p className="text-default-500 animate-pulse">Loading Agent MarketPlace templates...</p>
       </div>
     );
   }
@@ -73,7 +73,7 @@ export default function MarketplacePage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold text-default-900">Marketplace</h1>
+          <h1 className="text-3xl font-bold text-default-900">Agent MarketPlace</h1>
           <p className="text-default-500">Discover and deploy pre-trained AI agent templates.</p>
         </div>
         
@@ -91,7 +91,7 @@ export default function MarketplacePage() {
 
       {templates.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border-2 border-dashed border-divider rounded-xl">
-          <p className="text-default-500">No templates found in the marketplace.</p>
+          <p className="text-default-500">No templates found in the Agent MarketPlace.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">

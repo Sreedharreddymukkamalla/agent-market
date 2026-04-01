@@ -8,7 +8,12 @@ import {
   AgentsIcon, 
   MarketplaceIcon, 
   BillingIcon, 
-  SettingsIcon
+  SettingsIcon,
+  SearchIcon,
+  NotificationsIcon,
+  ShieldIcon,
+  InspectIcon,
+  MCPIcon,
 } from "../icons";
 import { SidebarItem } from "./sidebar-item";
 import { SidebarMenu } from "./sidebar-menu";
@@ -63,21 +68,27 @@ export const SidebarWrapper = () => {
               />
               <SidebarItem
                 isActive={pathname === "/dashboard/marketplace"}
-                title="Marketplace"
+                title="Agent MarketPlace"
                 icon={<MarketplaceIcon />}
                 href="/dashboard/marketplace"
               />
               <SidebarItem
                 isActive={pathname === "/agent-market"}
-                title="Agent Market"
-                icon={<MarketplaceIcon />}
+                title="MCP Market"
+                icon={<MCPIcon />}
                 href="/agent-market"
               />
               <SidebarItem
                 isActive={pathname === "/dashboard/mcp-inspection"}
                 title="MCP Inspector"
-                icon={<MarketplaceIcon />}
+                icon={<InspectIcon />}
                 href="/dashboard/mcp-inspection"
+              />
+              <SidebarItem
+                isActive={pathname === "/dashboard/mcp-scanner"}
+                title="MCP Scanner"
+                icon={<ShieldIcon />}
+                href="/dashboard/mcp-scanner"
               />
             </SidebarMenu>
 
