@@ -148,21 +148,21 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-4">
-        <div className="lg:col-span-1 flex flex-col gap-2">
-           {TABS.map((tab) => (
-             <Button 
-               key={tab} 
-               variant={tab === activeTab ? "primary" : "secondary"} 
-               className="justify-start font-bold transition-all"
-               onPress={() => setActiveTab(tab)}
-             >
-               {tab}
-             </Button>
-           ))}
+      <div className="flex flex-col gap-6 mt-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {TABS.map((tab) => (
+            <Button
+              key={tab}
+              variant={tab === activeTab ? "primary" : "secondary"}
+              className={`font-bold transition-all ${tab === activeTab ? 'px-4 py-2' : 'px-3 py-2'}`}
+              onPress={() => setActiveTab(tab)}
+            >
+              {tab}
+            </Button>
+          ))}
         </div>
 
-        <div className="lg:col-span-3 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           {renderTabContent()}
 
           <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm border-danger/20">
