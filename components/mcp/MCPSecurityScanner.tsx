@@ -9,7 +9,7 @@ const SEVERITY = {
   LOW:      { label: "LOW",      color: "#22d3ee", bg: "#001a1f" },
   INFO:     { label: "INFO",     color: "#6b7280", bg: "#111113" },
   PASS:     { label: "PASS",     color: "#22c55e", bg: "#0a1a0f" },
-};
+} as const;
 
 export default function MCPSecurityScanner({ serverUrl = "", token = "" }: { serverUrl?: string; token?: string; }) {
   const [url, setUrl] = useState(serverUrl);
@@ -147,7 +147,7 @@ export default function MCPSecurityScanner({ serverUrl = "", token = "" }: { ser
 
           <div style={S.findings}>
             {results.findings.map((f: any, i: number) => {
-              const s = SEVERITY[f.severity] || SEVERITY.INFO;
+              const s = SEVERITY[(f.severity as keyof typeof SEVERITY)] || SEVERITY.INFO;
               return (
                 <div key={i} style={{ ...S.finding, background: s.bg, borderColor: s.color + "33" }}>
                   <div style={S.findingHeader}>
