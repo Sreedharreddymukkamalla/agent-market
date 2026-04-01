@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button, TextField, InputGroup } from "@heroui/react";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { useTheme } from "next-themes";
 
 const TABS = ["Tools", "Resources", "Prompts"];
 
@@ -35,26 +34,7 @@ export default function MCPInspector() {
   const activeServer = servers.find((s) => s.id === activeServerId) || null;
   const connected = !!activeServer;
 
-  const { resolvedTheme } = useTheme();
-  const isLight = resolvedTheme === "light";
-
-  const LIGHT_C = {
-    bg: "#f6f7fb",
-    surface: "#ffffff",
-    border: "#e6e7eb",
-    borderHover: "#d7d8de",
-    text: "#0b1020",
-    muted: "#6b7280",
-    accent: "#6b46ff",
-    accentHover: "#7c5cff",
-    green: "#16a34a",
-    red: "#dc2626",
-    orange: "#ea580c",
-    cyan: "#0891b2",
-  };
-
-  const colors = isLight ? LIGHT_C : C;
-  const styles = getStyles(colors);
+  const styles = getStyles();
 
   const serverLabel = (s: any) => {
     try {
@@ -65,19 +45,73 @@ export default function MCPInspector() {
   };
 
   const PRESET_SERVERS = [
-    { id: "preset-boosted", url: "https://api.boostedchat.com/mcp", token: "" , name: "BoostedChat"},
-    { id: "preset-pubmed", url: "https://pubmed.caseyjhand.com/mcp", token: "", name: "PubMed (caseyjhand)" },
-    { id: "preset-skiplagged", url: "https://mcp.skiplagged.com/mcp", token: "", name: "Skiplagged MCP" },
-    { id: "preset-aeo", url: "https://aeo-mcp-server.amdal-dev.workers.dev/mcp", token: "", name: "AEO MCP" },
-    { id: "preset-frog", url: "https://frog03-20494.wykr.es/mcp", token: "", name: "Frog MCP" },
-    { id: "preset-koreannews", url: "https://korean-news-mcp.onrender.com/mcp", token: "", name: "Korean News MCP" },
-    { id: "preset-varrd", url: "https://app.varrd.com/mcp", token: "", name: "Varrd MCP" },
-    { id: "preset-pga", url: "https://mcp.pga.com/mcp", token: "", name: "PGA MCP" },
-    { id: "preset-petstore", url: "https://petstore.run.mcp.com.ai/mcp", token: "", name: "Petstore MCP" },
-    { id: "preset-linkedin", url: "https://linkedin.run.mcp.com.ai/mcp", token: "", name: "LinkedIn MCP" },
+    {
+      id: "preset-boosted",
+      url: "https://api.boostedchat.com/mcp",
+      token: "",
+      name: "BoostedChat",
+    },
+    {
+      id: "preset-pubmed",
+      url: "https://pubmed.caseyjhand.com/mcp",
+      token: "",
+      name: "PubMed (caseyjhand)",
+    },
+    {
+      id: "preset-skiplagged",
+      url: "https://mcp.skiplagged.com/mcp",
+      token: "",
+      name: "Skiplagged MCP",
+    },
+    {
+      id: "preset-aeo",
+      url: "https://aeo-mcp-server.amdal-dev.workers.dev/mcp",
+      token: "",
+      name: "AEO MCP",
+    },
+    {
+      id: "preset-frog",
+      url: "https://frog03-20494.wykr.es/mcp",
+      token: "",
+      name: "Frog MCP",
+    },
+    {
+      id: "preset-koreannews",
+      url: "https://korean-news-mcp.onrender.com/mcp",
+      token: "",
+      name: "Korean News MCP",
+    },
+    {
+      id: "preset-varrd",
+      url: "https://app.varrd.com/mcp",
+      token: "",
+      name: "Varrd MCP",
+    },
+    {
+      id: "preset-pga",
+      url: "https://mcp.pga.com/mcp",
+      token: "",
+      name: "PGA MCP",
+    },
+    {
+      id: "preset-petstore",
+      url: "https://petstore.run.mcp.com.ai/mcp",
+      token: "",
+      name: "Petstore MCP",
+    },
+    {
+      id: "preset-linkedin",
+      url: "https://linkedin.run.mcp.com.ai/mcp",
+      token: "",
+      name: "LinkedIn MCP",
+    },
   ];
 
-  const addPresetAndConnect = async (preset: { id: string; url: string; token?: string }) => {
+  const addPresetAndConnect = async (preset: {
+    id: string;
+    url: string;
+    token?: string;
+  }) => {
     // Connect immediately using the preset values
     await connect(preset.url, preset.token || "");
   };
@@ -93,8 +127,10 @@ export default function MCPInspector() {
     if (activeServerId) {
       setServers((prev) =>
         prev.map((s) =>
-          s.id === activeServerId ? { ...s, logs: [entry, ...(s.logs || [])].slice(0, 50) } : s
-        )
+          s.id === activeServerId
+            ? { ...s, logs: [entry, ...(s.logs || [])].slice(0, 50) }
+            : s,
+        ),
       );
     }
   };
@@ -134,7 +170,10 @@ export default function MCPInspector() {
 
       setServers((prev) => [serverEntry, ...prev]);
       setActiveServerId(id);
-      addLog("success", `Connected: ${data.serverInfo?.name || "MCP Server"} v${data.serverInfo?.version || "?"}`);
+      addLog(
+        "success",
+        `Connected: ${data.serverInfo?.name || "MCP Server"} v${data.serverInfo?.version || "?"}`,
+      );
 
       // fetch tools for the new server
       await fetchTab("Tools", serverEntry);
@@ -181,8 +220,8 @@ export default function MCPInspector() {
                 resources: tab === "Resources" ? data.items || [] : s.resources,
                 prompts: tab === "Prompts" ? data.items || [] : s.prompts,
               }
-            : s
-        )
+            : s,
+        ),
       );
 
       addLog("response", `← ${data.items?.length || 0} ${endpoint}`);
@@ -214,17 +253,17 @@ export default function MCPInspector() {
     setBuilding(true);
     addLog("request", `Building MCP from ${buildRepoUrl} (${buildType})`);
     try {
-      const res = await fetch('/api/mcp/build-from-git', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/mcp/build-from-git", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: buildRepoUrl, type: buildType }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Build failed');
-      addLog('success', `Build started: ${data.message || 'ok'}`);
+      if (!res.ok) throw new Error(data.error || "Build failed");
+      addLog("success", `Build started: ${data.message || "ok"}`);
       setShowBuildModal(false);
     } catch (e: any) {
-      addLog('error', e.message || String(e));
+      addLog("error", e.message || String(e));
     } finally {
       setBuilding(false);
     }
@@ -234,7 +273,10 @@ export default function MCPInspector() {
     if (!selectedTool || !activeServer) return;
     setCalling(true);
     setCallResult(null);
-    addLog("request", `→ tools/call: ${selectedTool.name} on ${activeServer.url}`);
+    addLog(
+      "request",
+      `→ tools/call: ${selectedTool.name} on ${activeServer.url}`,
+    );
     addLog("request", `  args: ${JSON.stringify(toolArgs)}`);
 
     try {
@@ -326,8 +368,8 @@ export default function MCPInspector() {
     ? activeTab === "Tools"
       ? activeServer.tools || []
       : activeTab === "Resources"
-      ? activeServer.resources || []
-      : activeServer.prompts || []
+        ? activeServer.resources || []
+        : activeServer.prompts || []
     : [];
 
   return (
@@ -351,7 +393,11 @@ export default function MCPInspector() {
                 title={s.url}
               >
                 {serverLabel(s)}
-                {s.info?.version && <span style={styles.serverBadge}>{` v${s.info.version}`}</span>}
+                {s.info?.version && (
+                  <span
+                    style={styles.serverBadge}
+                  >{` v${s.info.version}`}</span>
+                )}
               </button>
             ))}
             <button
@@ -366,8 +412,20 @@ export default function MCPInspector() {
             >
               + New
             </button>
-            <div style={{ display: 'flex', gap: 8, marginLeft: 12, alignItems: 'center' }}>
-              <label htmlFor="server-presets" style={{ color: colors.muted, fontSize: 12, marginRight: 8 }}>Presets:</label>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginLeft: 12,
+                alignItems: "center",
+              }}
+            >
+              <label
+                htmlFor="server-presets"
+                style={{ color: tk.muted, fontSize: 12, marginRight: 8 }}
+              >
+                Presets:
+              </label>
               <select
                 id="server-presets"
                 style={styles.serverPresetDropdown}
@@ -381,13 +439,19 @@ export default function MCPInspector() {
               >
                 <option value="">Choose preset…</option>
                 {PRESET_SERVERS.map((p) => (
-                  <option key={p.id} value={p.id} style={{ color: colors.text, background: colors.surface }}>{p.name}</option>
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    style={{ color: tk.text, background: tk.surface }}
+                  >
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={styles.statusDot(connected)} />
         </div>
       </div>
@@ -421,13 +485,24 @@ export default function MCPInspector() {
           </>
         ) : (
           <>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ color: colors.muted, fontSize: 12 }}>{activeServer?.url}</div>
+            <div
+              style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <div style={{ color: tk.muted, fontSize: 12 }}>
+                {activeServer?.url}
+              </div>
             </div>
-            <Button style={styles.connectBtn(false)} onPress={() => fetchTab(activeTab)}>
+            <Button
+              style={styles.connectBtn(false)}
+              onPress={() => fetchTab(activeTab)}
+            >
               Refresh
             </Button>
-            <Button variant="secondary" style={styles.disconnectBtn} onPress={disconnect}>
+            <Button
+              variant="secondary"
+              style={styles.disconnectBtn}
+              onPress={disconnect}
+            >
               Remove
             </Button>
           </>
@@ -450,14 +525,22 @@ export default function MCPInspector() {
               >
                 {tab}
                 {tab === "Tools" && (activeServer?.tools || []).length > 0 && (
-                  <span style={styles.count}>{(activeServer?.tools || []).length}</span>
+                  <span style={styles.count}>
+                    {(activeServer?.tools || []).length}
+                  </span>
                 )}
-                {tab === "Resources" && (activeServer?.resources || []).length > 0 && (
-                  <span style={styles.count}>{(activeServer?.resources || []).length}</span>
-                )}
-                {tab === "Prompts" && (activeServer?.prompts || []).length > 0 && (
-                  <span style={styles.count}>{(activeServer?.prompts || []).length}</span>
-                )}
+                {tab === "Resources" &&
+                  (activeServer?.resources || []).length > 0 && (
+                    <span style={styles.count}>
+                      {(activeServer?.resources || []).length}
+                    </span>
+                  )}
+                {tab === "Prompts" &&
+                  (activeServer?.prompts || []).length > 0 && (
+                    <span style={styles.count}>
+                      {(activeServer?.prompts || []).length}
+                    </span>
+                  )}
               </button>
             ))}
           </div>
@@ -470,9 +553,21 @@ export default function MCPInspector() {
             )}
             {connected && activeItems.length === 0 && (
               <>
-                <div style={styles.emptyState}>No {activeTab.toLowerCase()} found</div>
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-                  <Button variant="secondary" onPress={openBuildModal} style={{ padding: '6px 10px' }}>
+                <div style={styles.emptyState}>
+                  No {activeTab.toLowerCase()} found
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginTop: 8,
+                  }}
+                >
+                  <Button
+                    variant="secondary"
+                    onPress={openBuildModal}
+                    style={{ padding: "6px 10px" }}
+                  >
                     Build from Git
                   </Button>
                 </div>
@@ -510,7 +605,9 @@ export default function MCPInspector() {
                 <div>
                   <div style={styles.detailName}>{selectedTool.name}</div>
                   {selectedTool.description && (
-                    <div style={styles.detailDesc}>{selectedTool.description}</div>
+                    <div style={styles.detailDesc}>
+                      {selectedTool.description}
+                    </div>
                   )}
                 </div>
               </div>
@@ -523,7 +620,7 @@ export default function MCPInspector() {
                   ) : (
                     <div style={styles.fields}>
                       {getSchemaFields(selectedTool).map(({ key, schema }) =>
-                        renderSchemaField(key, schema)
+                        renderSchemaField(key, schema),
                       )}
                     </div>
                   )}
@@ -563,13 +660,17 @@ export default function MCPInspector() {
       <div style={styles.logPanel}>
         <div style={styles.logHeader}>
           <span>JSON-RPC Log</span>
-          <Button variant="secondary" style={styles.clearBtn} onPress={() => setLogs([])}>
+          <Button
+            variant="secondary"
+            style={styles.clearBtn}
+            onPress={() => setLogs([])}
+          >
             clear
           </Button>
         </div>
         <div style={styles.logBody}>
           {(activeServer?.logs || logs).length === 0 && (
-            <span style={{ color: colors.muted }}>No activity yet</span>
+            <span style={{ color: tk.muted }}>No activity yet</span>
           )}
           {(activeServer?.logs || logs).map((log: any) => (
             <div key={log.id} style={styles.logEntry(log.type)}>
@@ -587,7 +688,12 @@ export default function MCPInspector() {
             </div>
             <div style={styles.modalBody}>
               <div>
-                <label htmlFor="build-repo-url" style={{ fontSize: 12, color: colors.muted }}>Repository URL</label>
+                <label
+                  htmlFor="build-repo-url"
+                  style={{ fontSize: 12, color: tk.muted }}
+                >
+                  Repository URL
+                </label>
                 <input
                   id="build-repo-url"
                   style={styles.input}
@@ -598,7 +704,12 @@ export default function MCPInspector() {
               </div>
 
               <div>
-                <label htmlFor="build-type" style={{ fontSize: 12, color: colors.muted }}>MCP Type</label>
+                <label
+                  htmlFor="build-type"
+                  style={{ fontSize: 12, color: tk.muted }}
+                >
+                  MCP Type
+                </label>
                 <select
                   id="build-type"
                   value={buildType}
@@ -614,12 +725,20 @@ export default function MCPInspector() {
               </div>
             </div>
             <div style={styles.modalFooter}>
-                <Button variant="secondary" onPress={closeBuildModal} isDisabled={building}>
-                  Cancel
-                </Button>
-                <Button onPress={buildFromGit} isDisabled={building} style={{ marginLeft: 8 }}>
-                  {building ? "Building…" : "Build"}
-                </Button>
+              <Button
+                variant="secondary"
+                onPress={closeBuildModal}
+                isDisabled={building}
+              >
+                Cancel
+              </Button>
+              <Button
+                onPress={buildFromGit}
+                isDisabled={building}
+                style={{ marginLeft: 8 }}
+              >
+                {building ? "Building…" : "Build"}
+              </Button>
             </div>
           </div>
         </div>
@@ -628,369 +747,413 @@ export default function MCPInspector() {
   );
 }
 
-const C = {
-  bg: "#0d0d0f",
-  surface: "#141416",
-  border: "#1e1e22",
-  borderHover: "#2e2e35",
-  text: "#e8e8f0",
-  muted: "#5a5a6e",
-  accent: "#7c6af7",
-  accentHover: "#9585ff",
-  green: "#22c55e",
-  red: "#ef4444",
-  orange: "#f97316",
-  cyan: "#22d3ee",
+/** Theme tokens — align with globals.css ChatGPT system */
+const tk = {
+  bg: "var(--tool-bg)",
+  surface: "var(--tool-surface)",
+  border: "var(--tool-border)",
+  borderHover: "var(--tool-border-hover)",
+  text: "var(--foreground)",
+  muted: "var(--muted)",
+  accent: "var(--accent)",
+  accentFg: "var(--accent-foreground)",
+  green: "var(--tool-green)",
+  red: "var(--tool-red)",
+  orange: "var(--tool-orange)",
+  cyan: "var(--tool-cyan)",
+  disabledBg: "var(--default)",
+  mixAccentBorder: "color-mix(in oklab, var(--accent) 28%, transparent)",
+  mixAccentSoft: "color-mix(in oklab, var(--accent) 22%, transparent)",
+  mixRedBorder: "color-mix(in oklab, var(--tool-red) 30%, transparent)",
+  mixRedBg: "color-mix(in oklab, var(--tool-red) 12%, var(--tool-surface))",
+  mixAccentDash: "color-mix(in oklab, var(--accent) 40%, transparent)",
+  badgeBg: "color-mix(in oklab, var(--tool-surface) 88%, var(--foreground) 12%)",
 };
 
-function getStyles(C: any): any {
+function getStyles(): any {
+  const C = tk;
   return {
-  root: {
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-    background: C.bg,
-    color: C.text,
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    fontSize: 13,
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px 20px",
-    borderBottom: `1px solid ${C.border}`,
-    background: C.surface,
-  },
-  headerLeft: { display: "flex", alignItems: "center", gap: 10 },
-  logo: { fontSize: 18, color: C.accent },
-  title: { fontWeight: 700, fontSize: 14, letterSpacing: "0.05em", color: C.text },
-  serverBadge: {
-    background: "#1a1a2e",
-    border: `1px solid ${C.accent}44`,
-    color: C.accent,
-    padding: "2px 8px",
-    borderRadius: 4,
-    fontSize: 11,
-  },
-  statusDot: (connected: boolean) => ({
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    background: connected ? C.green : C.muted,
-    boxShadow: connected ? `0 0 6px ${C.green}` : "none",
-    transition: "all 0.3s",
-  }),
-  connectBar: {
-    display: "flex",
-    gap: 8,
-    padding: "12px 20px",
-    borderBottom: `1px solid ${C.border}`,
-    background: C.surface,
-  },
-  urlInput: {
-    flex: 1,
-    background: C.bg,
-    border: `1px solid ${C.border}`,
-    borderRadius: 6,
-    padding: "8px 12px",
-    color: C.text,
-    fontSize: 12,
-    fontFamily: "inherit",
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-  connectBtn: (disabled: boolean) => ({
-    background: disabled ? "#1e1e28" : C.accent,
-    color: disabled ? C.muted : "#fff",
-    border: "none",
-    borderRadius: 6,
-    padding: "8px 20px",
-    cursor: disabled ? "not-allowed" : "pointer",
-    fontFamily: "inherit",
-    fontSize: 12,
-    fontWeight: 600,
-    transition: "all 0.2s",
-    whiteSpace: "nowrap",
-  }),
-  disconnectBtn: {
-    background: "transparent",
-    color: C.red,
-    border: `1px solid ${C.red}44`,
-    borderRadius: 6,
-    padding: "8px 20px",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    fontSize: 12,
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  },
-  errorBanner: {
-    background: "#2a0f0f",
-    border: `1px solid ${C.red}44`,
-    color: C.red,
-    padding: "8px 20px",
-    fontSize: 12,
-  },
-  main: {
-    flex: 1,
-    display: "flex",
-    minHeight: 0,
-    overflow: "hidden",
-  },
-  leftPanel: {
-    width: 280,
-    borderRight: `1px solid ${C.border}`,
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
-  },
-  tabs: {
-    display: "flex",
-    borderBottom: `1px solid ${C.border}`,
-  },
-  serverTabs: {
-    display: "flex",
-    gap: 8,
-    marginLeft: 16,
-    alignItems: "center",
-  },
-  serverTab: (active: boolean) => ({
-    background: active ? C.surface : "transparent",
-    color: active ? C.text : C.muted,
-    border: `1px solid ${active ? C.accent + "44" : "transparent"}`,
-    padding: "6px 8px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontSize: 12,
-  }),
-  serverNew: {
-    background: "transparent",
-    color: C.accent,
-    border: `1px dashed ${C.accent}66`,
-    padding: "6px 8px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontSize: 12,
-  },
-  serverPreset: {
-    background: "transparent",
-    color: C.text,
-    border: `1px solid ${C.border}`,
-    padding: "6px 8px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontSize: 12,
-  },
-  serverPresetDropdown: {
-    background: C.surface,
-    color: C.text,
-    border: `1px solid ${C.border}`,
-    padding: "6px 10px",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontSize: 12,
-    appearance: "none",
-    // ensure readable contrast
-    outline: "none",
-  },
-  tab: (active: boolean) => ({
-    flex: 1,
-    padding: "10px 0",
-    background: active ? C.surface : "transparent",
-    border: "none",
-    borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
-    color: active ? C.text : C.muted,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    fontSize: 12,
-    fontWeight: active ? 600 : 400,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    transition: "all 0.15s",
-  }),
-  count: {
-    background: C.accent + "33",
-    color: C.accent,
-    borderRadius: 10,
-    padding: "0px 5px",
-    fontSize: 10,
-    fontWeight: 700,
-  },
-  list: {
-    flex: 1,
-    overflowY: "auto",
-    padding: 8,
-  },
-  listItem: (active: boolean) => ({
-    display: "block",
-    width: "100%",
-    textAlign: "left",
-    background: active ? C.surface : "transparent",
-    border: `1px solid ${active ? C.accent + "44" : "transparent"}`,
-    borderRadius: 6,
-    padding: "10px 12px",
-    marginBottom: 4,
-    cursor: "pointer",
-    color: C.text,
-    fontFamily: "inherit",
-    transition: "all 0.15s",
-  }),
-  itemName: { fontSize: 12, fontWeight: 600, color: C.accent, marginBottom: 2 },
-  itemDesc: { fontSize: 11, color: C.muted, lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  rightPanel: {
-    flex: 1,
-    overflowY: "auto",
-    padding: 20,
-  },
-  emptyState: {
-    color: C.muted,
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 60,
-    lineHeight: 1.6,
-  },
-  detail: { display: "flex", flexDirection: "column", gap: 16 },
-  detailHeader: {
-    borderBottom: `1px solid ${C.border}`,
-    paddingBottom: 16,
-  },
-  detailName: { fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 4 },
-  detailDesc: { fontSize: 12, color: C.muted, lineHeight: 1.6 },
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    color: C.muted,
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    marginBottom: 8,
-  },
-  fields: { display: "flex", flexDirection: "column", gap: 12 },
-  field: { display: "flex", flexDirection: "column", gap: 4 },
-  fieldLabel: { fontSize: 12, fontWeight: 600, color: C.cyan },
-  fieldType: { color: C.muted, fontWeight: 400 },
-  required: { color: C.red },
-  fieldDesc: { fontSize: 11, color: C.muted, margin: 0 },
-  input: {
-    background: C.bg,
-    border: `1px solid ${C.border}`,
-    borderRadius: 5,
-    padding: "7px 10px",
-    color: C.text,
-    fontFamily: "inherit",
-    fontSize: 12,
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
-  },
-  noParams: { color: C.muted, fontSize: 12, padding: "8px 0" },
-  callBtn: (loading: boolean) => ({
-    background: loading ? "#1e1e28" : C.accent,
-    color: loading ? C.muted : "#fff",
-    border: "none",
-    borderRadius: 6,
-    padding: "10px 20px",
-    cursor: loading ? "not-allowed" : "pointer",
-    fontFamily: "inherit",
-    fontSize: 12,
-    fontWeight: 700,
-    letterSpacing: "0.05em",
-    alignSelf: "flex-start",
-    transition: "all 0.2s",
-  }),
-  result: (isError: boolean) => ({
-    background: isError ? "#1a0808" : "#0a0a12",
-    border: `1px solid ${isError ? C.red + "44" : C.border}`,
-    borderRadius: 6,
-    padding: 16,
-    color: isError ? C.red : C.green,
-    fontSize: 11,
-    lineHeight: 1.6,
-    overflow: "auto",
-    margin: 0,
-    fontFamily: "inherit",
-    maxHeight: 400,
-  }),
-  logPanel: {
-    height: 160,
-    borderTop: `1px solid ${C.border}`,
-    background: C.surface,
-    display: "flex",
-    flexDirection: "column",
-  },
-  logHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "6px 16px",
-    borderBottom: `1px solid ${C.border}`,
-    color: C.muted,
-    fontSize: 10,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-  },
-  clearBtn: {
-    background: "none",
-    border: "none",
-    color: C.muted,
-    cursor: "pointer",
-    fontSize: 10,
-    fontFamily: "inherit",
-    padding: "2px 4px",
-  },
-  logBody: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "6px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-  },
-  logEntry: (type: string) => ({
-    display: "flex",
-    gap: 12,
-    alignItems: "flex-start",
-  }),
-  logTime: { color: "#333", fontSize: 10, flexShrink: 0, paddingTop: 1 },
-  logMsg: (type: string) => ({
-    fontSize: 11,
-    color:
-      type === "error" ? C.red
-      : type === "success" ? C.green
-      : type === "request" ? C.cyan
-      : type === "response" ? C.orange
-      : C.muted,
-    lineHeight: 1.5,
-  }),
-  modalOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.45)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: 16,
-  },
-  modal: {
-    background: C.surface,
-    border: `1px solid ${C.border}`,
-    borderRadius: 8,
-    padding: 16,
-    width: 560,
-    maxWidth: "100%",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.6)",
-  },
-  modalHeader: {
-    borderBottom: `1px solid ${C.border}`,
-    paddingBottom: 8,
-    marginBottom: 8,
-  },
-  modalBody: { display: "flex", flexDirection: "column", gap: 12 },
-  modalFooter: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 },
+    root: {
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+      background: C.bg,
+      color: C.text,
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: 13,
+    },
+    header: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "12px 20px",
+      borderBottom: `1px solid ${C.border}`,
+      background: C.surface,
+    },
+    headerLeft: { display: "flex", alignItems: "center", gap: 10 },
+    logo: { fontSize: 18, color: C.accent },
+    title: {
+      fontWeight: 700,
+      fontSize: 14,
+      letterSpacing: "0.05em",
+      color: C.text,
+    },
+    serverBadge: {
+      background: C.badgeBg,
+      border: `1px solid ${C.mixAccentBorder}`,
+      color: C.accent,
+      padding: "2px 8px",
+      borderRadius: 4,
+      fontSize: 11,
+    },
+    statusDot: (connected: boolean) => ({
+      width: 8,
+      height: 8,
+      borderRadius: "50%",
+      background: connected ? C.green : C.muted,
+      boxShadow: connected
+        ? "0 0 0 2px color-mix(in oklab, var(--tool-green) 35%, transparent)"
+        : "none",
+      transition: "all 0.3s",
+    }),
+    connectBar: {
+      display: "flex",
+      gap: 8,
+      padding: "12px 20px",
+      borderBottom: `1px solid ${C.border}`,
+      background: C.surface,
+    },
+    urlInput: {
+      flex: 1,
+      background: C.bg,
+      border: `1px solid ${C.border}`,
+      borderRadius: 6,
+      padding: "8px 12px",
+      color: C.text,
+      fontSize: 12,
+      fontFamily: "inherit",
+      outline: "none",
+      transition: "border-color 0.2s",
+    },
+    connectBtn: (disabled: boolean) => ({
+      background: disabled ? C.disabledBg : C.accent,
+      color: disabled ? C.muted : C.accentFg,
+      border: "none",
+      borderRadius: 6,
+      padding: "8px 20px",
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontFamily: "inherit",
+      fontSize: 12,
+      fontWeight: 600,
+      transition: "all 0.2s",
+      whiteSpace: "nowrap",
+    }),
+    disconnectBtn: {
+      background: "transparent",
+      color: C.red,
+      border: `1px solid ${C.mixRedBorder}`,
+      borderRadius: 6,
+      padding: "8px 20px",
+      cursor: "pointer",
+      fontFamily: "inherit",
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: "nowrap",
+    },
+    errorBanner: {
+      background: "var(--tool-error-bg)",
+      border: `1px solid ${C.mixRedBorder}`,
+      color: C.red,
+      padding: "8px 20px",
+      fontSize: 12,
+    },
+    main: {
+      flex: 1,
+      display: "flex",
+      minHeight: 0,
+      overflow: "hidden",
+    },
+    leftPanel: {
+      width: 280,
+      borderRight: `1px solid ${C.border}`,
+      display: "flex",
+      flexDirection: "column",
+      minHeight: 0,
+    },
+    tabs: {
+      display: "flex",
+      borderBottom: `1px solid ${C.border}`,
+    },
+    serverTabs: {
+      display: "flex",
+      gap: 8,
+      marginLeft: 16,
+      alignItems: "center",
+    },
+    serverTab: (active: boolean) => ({
+      background: active ? C.surface : "transparent",
+      color: active ? C.text : C.muted,
+      border: `1px solid ${active ? C.mixAccentBorder : "transparent"}`,
+      padding: "6px 8px",
+      borderRadius: 6,
+      cursor: "pointer",
+      fontSize: 12,
+    }),
+    serverNew: {
+      background: "transparent",
+      color: C.accent,
+      border: `1px dashed ${C.mixAccentDash}`,
+      padding: "6px 8px",
+      borderRadius: 6,
+      cursor: "pointer",
+      fontSize: 12,
+    },
+    serverPreset: {
+      background: "transparent",
+      color: C.text,
+      border: `1px solid ${C.border}`,
+      padding: "6px 8px",
+      borderRadius: 6,
+      cursor: "pointer",
+      fontSize: 12,
+    },
+    serverPresetDropdown: {
+      background: C.surface,
+      color: C.text,
+      border: `1px solid ${C.border}`,
+      padding: "6px 10px",
+      borderRadius: 8,
+      cursor: "pointer",
+      fontSize: 12,
+      appearance: "none",
+      // ensure readable contrast
+      outline: "none",
+    },
+    tab: (active: boolean) => ({
+      flex: 1,
+      padding: "10px 0",
+      background: active ? C.surface : "transparent",
+      border: "none",
+      borderBottom: active
+        ? `2px solid color-mix(in oklab, var(--accent) 55%, transparent)`
+        : "2px solid transparent",
+      color: active ? C.text : C.muted,
+      cursor: "pointer",
+      fontFamily: "inherit",
+      fontSize: 12,
+      fontWeight: active ? 600 : 400,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      transition: "all 0.15s",
+    }),
+    count: {
+      background: C.mixAccentSoft,
+      color: C.accent,
+      borderRadius: 10,
+      padding: "0px 5px",
+      fontSize: 10,
+      fontWeight: 700,
+    },
+    list: {
+      flex: 1,
+      overflowY: "auto",
+      padding: 8,
+    },
+    listItem: (active: boolean) => ({
+      display: "block",
+      width: "100%",
+      textAlign: "left",
+      background: active ? C.surface : "transparent",
+      border: `1px solid ${active ? C.mixAccentBorder : "transparent"}`,
+      borderRadius: 6,
+      padding: "10px 12px",
+      marginBottom: 4,
+      cursor: "pointer",
+      color: C.text,
+      fontFamily: "inherit",
+      transition: "all 0.15s",
+    }),
+    itemName: {
+      fontSize: 12,
+      fontWeight: 600,
+      color: C.accent,
+      marginBottom: 2,
+    },
+    itemDesc: {
+      fontSize: 11,
+      color: C.muted,
+      lineHeight: 1.4,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+    rightPanel: {
+      flex: 1,
+      overflowY: "auto",
+      padding: 20,
+    },
+    emptyState: {
+      color: C.muted,
+      fontSize: 12,
+      textAlign: "center",
+      marginTop: 60,
+      lineHeight: 1.6,
+    },
+    detail: { display: "flex", flexDirection: "column", gap: 16 },
+    detailHeader: {
+      borderBottom: `1px solid ${C.border}`,
+      paddingBottom: 16,
+    },
+    detailName: {
+      fontSize: 16,
+      fontWeight: 700,
+      color: C.text,
+      marginBottom: 4,
+    },
+    detailDesc: { fontSize: 12, color: C.muted, lineHeight: 1.6 },
+    sectionLabel: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: C.muted,
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+      marginBottom: 8,
+    },
+    fields: { display: "flex", flexDirection: "column", gap: 12 },
+    field: { display: "flex", flexDirection: "column", gap: 4 },
+    fieldLabel: { fontSize: 12, fontWeight: 600, color: C.cyan },
+    fieldType: { color: C.muted, fontWeight: 400 },
+    required: { color: C.red },
+    fieldDesc: { fontSize: 11, color: C.muted, margin: 0 },
+    input: {
+      background: C.bg,
+      border: `1px solid ${C.border}`,
+      borderRadius: 5,
+      padding: "7px 10px",
+      color: C.text,
+      fontFamily: "inherit",
+      fontSize: 12,
+      outline: "none",
+      width: "100%",
+      boxSizing: "border-box",
+    },
+    noParams: { color: C.muted, fontSize: 12, padding: "8px 0" },
+    callBtn: (loading: boolean) => ({
+      background: loading ? C.disabledBg : C.accent,
+      color: loading ? C.muted : C.accentFg,
+      border: "none",
+      borderRadius: 6,
+      padding: "10px 20px",
+      cursor: loading ? "not-allowed" : "pointer",
+      fontFamily: "inherit",
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: "0.05em",
+      alignSelf: "flex-start",
+      transition: "all 0.2s",
+    }),
+    result: (isError: boolean) => ({
+      background: isError ? "var(--tool-error-bg)" : "var(--tool-result-bg)",
+      border: `1px solid ${isError ? C.mixRedBorder : C.border}`,
+      borderRadius: 6,
+      padding: 16,
+      color: isError ? C.red : C.green,
+      fontSize: 11,
+      lineHeight: 1.6,
+      overflow: "auto",
+      margin: 0,
+      fontFamily: "inherit",
+      maxHeight: 400,
+    }),
+    logPanel: {
+      height: 160,
+      borderTop: `1px solid ${C.border}`,
+      background: C.surface,
+      display: "flex",
+      flexDirection: "column",
+    },
+    logHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "6px 16px",
+      borderBottom: `1px solid ${C.border}`,
+      color: C.muted,
+      fontSize: 10,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+    },
+    clearBtn: {
+      background: "none",
+      border: "none",
+      color: C.muted,
+      cursor: "pointer",
+      fontSize: 10,
+      fontFamily: "inherit",
+      padding: "2px 4px",
+    },
+    logBody: {
+      flex: 1,
+      overflowY: "auto",
+      padding: "6px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+    },
+    logEntry: (type: string) => ({
+      display: "flex",
+      gap: 12,
+      alignItems: "flex-start",
+    }),
+    logTime: { color: C.muted, fontSize: 10, flexShrink: 0, paddingTop: 1 },
+    logMsg: (type: string) => ({
+      fontSize: 11,
+      color:
+        type === "error"
+          ? C.red
+          : type === "success"
+            ? C.green
+            : type === "request"
+              ? C.cyan
+              : type === "response"
+                ? C.orange
+                : C.muted,
+      lineHeight: 1.5,
+    }),
+    modalOverlay: {
+      position: "fixed",
+      inset: 0,
+      background: "var(--scrim)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1000,
+      padding: 16,
+    },
+    modal: {
+      background: C.surface,
+      border: `1px solid ${C.border}`,
+      borderRadius: 8,
+      padding: 16,
+      width: 560,
+      maxWidth: "100%",
+      boxShadow: "var(--overlay-shadow)",
+    },
+    modalHeader: {
+      borderBottom: `1px solid ${C.border}`,
+      paddingBottom: 8,
+      marginBottom: 8,
+    },
+    modalBody: { display: "flex", flexDirection: "column", gap: 12 },
+    modalFooter: {
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 8,
+      marginTop: 12,
+    },
   };
 }
 

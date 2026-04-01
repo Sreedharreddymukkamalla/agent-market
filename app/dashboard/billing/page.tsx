@@ -18,14 +18,16 @@ export default function BillingPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-        <Card className="lg:col-span-2 bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm">
+        <Card className="lg:col-span-2 bg-surface border border-divider p-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 pb-8 border-b border-divider">
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Current Plan</span>
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Current Plan
+              </span>
               <h2 className="text-4xl font-extrabold text-default-900">Free Tier</h2>
               <p className="text-default-500">Perfect for exploring and small experimental bots.</p>
             </div>
-            <Button variant="primary" size="lg" className="font-bold shadow-lg shadow-primary/20">
+            <Button variant="primary" size="lg" className="font-semibold rounded-xl">
               Upgrade to Pro
             </Button>
           </div>
@@ -38,7 +40,7 @@ export default function BillingPage() {
                 <span className="text-sm text-default-400 mb-1">/ 5</span>
               </div>
               <div className="w-full h-1.5 bg-default-100 rounded-full mt-2 overflow-hidden">
-                <div className="w-[60%] h-full bg-primary" />
+                <div className="w-[60%] h-full bg-foreground" />
               </div>
             </div>
 
@@ -60,13 +62,13 @@ export default function BillingPage() {
                 <span className="text-sm text-default-400 mb-1">Trial</span>
               </div>
               <div className="w-full h-1.5 bg-default-100 rounded-full mt-2 overflow-hidden">
-                <div className="w-[100%] h-full bg-accent" />
+                <div className="w-[100%] h-full bg-foreground opacity-90" />
               </div>
             </div>
           </div>
         </Card>
 
-        <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm">
+        <Card className="bg-surface border border-divider p-8">
            <h3 className="text-xl font-bold text-default-900 mb-4">Payment Methods</h3>
            <p className="text-sm text-default-500 mb-6">No payment methods added yet.</p>
            <Button variant="secondary" className="w-full font-bold">Add Payment Method</Button>
@@ -75,7 +77,7 @@ export default function BillingPage() {
 
       <div className="mt-8">
         <h2 className="text-xl font-bold text-default-900 mb-4">Invoice History</h2>
-        <Card className="bg-background/60 backdrop-blur-md border border-divider overflow-hidden">
+        <Card className="bg-surface border border-divider overflow-hidden">
           <Table aria-label="Recent invoices" className="min-w-full">
             <Table.ScrollContainer>
               <Table.Content>

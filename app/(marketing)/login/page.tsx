@@ -46,7 +46,7 @@ function LoginContent() {
         setLoading(false);
       } else {
         console.log('Login successful, redirecting to dashboard...');
-        router.push('/dashboard');
+        router.push('/dashboard/agent-aim');
         router.refresh();
       }
     } else {
@@ -76,7 +76,7 @@ function LoginContent() {
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-6">
-      <Card className="w-full max-w-md p-8 shadow-2xl backdrop-blur-md bg-background/60">
+      <Card className="w-full max-w-md p-8 border border-divider bg-surface">
         <div className="flex flex-col gap-4 text-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             {mode === 'login' ? 'Welcome Back' : 'Create an Account'}
@@ -131,7 +131,7 @@ function LoginContent() {
             size="lg"
             type="submit"
             isPending={loading}
-            className="w-full font-semibold shadow-lg shadow-primary/20"
+            className="w-full font-semibold rounded-xl"
           >
             {mode === 'login' ? 'Log In' : 'Sign Up'}
           </Button>
@@ -150,7 +150,7 @@ function LoginContent() {
               setMode(mode === 'login' ? 'signup' : 'login');
               setError(null);
             }}
-            className="text-sm font-medium text-primary hover:underline transition-all"
+            className="text-sm font-medium text-foreground underline-offset-4 hover:underline transition-all"
           >
             {mode === 'login'
               ? "Don't have an account? Create one"

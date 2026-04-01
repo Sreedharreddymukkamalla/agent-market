@@ -34,7 +34,7 @@ export default function SettingsPage() {
       case "Profile":
         return (
           <div className="flex flex-col gap-6">
-            <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm">
+            <Card className="bg-surface border border-divider p-8">
               <h2 className="text-xl font-bold text-default-900 mb-6">Profile Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -77,7 +77,7 @@ export default function SettingsPage() {
               </Button>
             </Card>
 
-            <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm">
+            <Card className="bg-surface border border-divider p-8">
               <h2 className="text-xl font-bold text-default-900 mb-6">Preferences</h2>
               
               <div className="flex flex-col gap-6">
@@ -110,14 +110,14 @@ export default function SettingsPage() {
         );
       case "Account":
         return (
-          <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm">
+          <Card className="bg-surface border border-divider p-8">
              <h2 className="text-xl font-bold text-default-900 mb-4">Account Settings</h2>
              <p className="text-default-500 italic">Account management features coming soon...</p>
           </Card>
         );
       default:
         return (
-          <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm">
+          <Card className="bg-surface border border-divider p-8">
              <h2 className="text-xl font-bold text-default-900 mb-4">{activeTab}</h2>
              <p className="text-default-500 italic">{activeTab} configuration features coming soon...</p>
           </Card>
@@ -133,16 +133,16 @@ export default function SettingsPage() {
       </div>
 
       {showSuccess && (
-        <Card className="fixed top-24 right-8 z-[203] bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-500/30 p-4 shadow-xl animate-in fade-in slide-in-from-right-4 w-auto max-w-xs">
+        <Card className="fixed top-24 right-8 z-[203] bg-surface border border-divider p-4 shadow-[var(--overlay-shadow)] w-auto max-w-xs">
           <div className="flex gap-3 items-center">
-            <div className="bg-success text-white rounded-full p-1 shrink-0">
+            <div className="bg-success text-success-foreground rounded-full p-1 shrink-0">
                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                  <polyline points="20 6 9 17 4 12"></polyline>
                </svg>
             </div>
             <div className="flex flex-col gap-0.5">
-              <p className="font-bold text-success-700 dark:text-success-400 text-sm">Updated Successfully</p>
-              <p className="text-xs text-success-600 dark:text-success-500/80">Your changes have been saved.</p>
+              <p className="font-bold text-foreground text-sm">Updated Successfully</p>
+              <p className="text-xs text-muted-foreground">Your changes have been saved.</p>
             </div>
           </div>
         </Card>
@@ -165,12 +165,12 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-6">
           {renderTabContent()}
 
-          <Card className="bg-background/60 backdrop-blur-md border border-divider p-8 shadow-sm border-danger/20">
-            <h2 className="text-xl font-bold text-danger mb-4 font-mono uppercase tracking-tighter">Danger Zone</h2>
+          <Card className="bg-surface border border-danger/25 p-8">
+            <h2 className="text-xl font-bold text-danger mb-4 uppercase tracking-tight">Danger Zone</h2>
             <p className="text-sm text-default-500 mb-6">Permanently delete your account and all associated agent data.</p>
             <Button 
-              variant="secondary" 
-              className="text-danger hover:bg-danger/10 border-danger/20 font-bold transition-colors"
+              variant="danger-soft"
+              className="font-semibold"
               onPress={handleDelete}
             >
                Delete Account

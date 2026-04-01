@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Kbd, Link, TextField, InputGroup, Avatar, Dropdown, Selection } from "@heroui/react";
+import {
+  Button,
+  Kbd,
+  Link,
+  TextField,
+  InputGroup,
+  Avatar,
+  Dropdown,
+  Selection,
+} from "@heroui/react";
 import NextLink from "next/link";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
@@ -26,13 +35,17 @@ export const Navbar = () => {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
     };
 
     getUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       router.refresh();
     });
@@ -49,7 +62,7 @@ export const Navbar = () => {
     <TextField aria-label="Search" type="search">
       <InputGroup>
         <InputGroup.Prefix>
-          <SearchIcon className="text-base text-muted pointer-events-none flex-shrink-0" />
+          <SearchIcon className="text-base text-muted-foreground pointer-events-none flex-shrink-0" />
         </InputGroup.Prefix>
         <InputGroup.Input className="text-sm" placeholder="Search..." />
         <InputGroup.Suffix>
@@ -63,19 +76,21 @@ export const Navbar = () => {
   );
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b border-separator bg-background/70 backdrop-blur-lg">
+    <nav className="sticky top-0 z-40 w-full border-b border-divider bg-surface/95 backdrop-blur-md">
       <header className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-6">
         <div className="flex items-center gap-4">
           <NextLink className="flex items-center gap-1" href="/">
             <Logo />
-            <p className="font-bold text-xl tracking-tight text-foreground ml-1">AgentMarket</p>
+            <p className="font-bold text-xl tracking-tight text-foreground ml-1">
+              AgentMarket
+            </p>
           </NextLink>
           <ul className="hidden lg:flex gap-4 ml-2">
             {user && (
               <li>
                 <NextLink
-                  className="text-foreground hover:text-primary transition-colors font-medium"
-                  href="/dashboard"
+                  className="text-foreground hover:text-muted-foreground transition-colors font-medium"
+                  href="/dashboard/agent-aim"
                 >
                   Dashboard
                 </NextLink>
@@ -85,8 +100,8 @@ export const Navbar = () => {
               <li key={item.href}>
                 <NextLink
                   className={clsx(
-                    "text-foreground hover:text-accent transition-colors",
-                    "data-[active=true]:text-accent data-[active=true]:font-medium",
+                    "text-foreground hover:text-muted-foreground transition-colors",
+                    "data-[active=true]:font-semibold",
                   )}
                   href={item.href}
                 >
@@ -104,16 +119,22 @@ export const Navbar = () => {
             {user ? (
               <Dropdown>
                 <Dropdown.Trigger>
-                  <Avatar className="transition-transform" color="accent" size="sm">
+                  <Avatar
+                    className="transition-transform"
+                    color="default"
+                    size="sm"
+                  >
                     <Avatar.Image src={user.user_metadata?.avatar_url} />
-                    <Avatar.Fallback>{user.email?.charAt(0).toUpperCase()}</Avatar.Fallback>
+                    <Avatar.Fallback>
+                      {user.email?.charAt(0).toUpperCase()}
+                    </Avatar.Fallback>
                   </Avatar>
                 </Dropdown.Trigger>
                 <Dropdown.Popover placement="bottom end">
                   <Dropdown.Menu aria-label="Profile Actions">
                     <Dropdown.Item key="profile" className="h-14 gap-2">
                       <p className="font-semibold">Signed in as</p>
-                      <p className="font-semibold text-primary">{user.email}</p>
+                      <p className="font-semibold text-foreground">{user.email}</p>
                     </Dropdown.Item>
                     <Dropdown.Item key="settings">My Settings</Dropdown.Item>
                     <Dropdown.Item key="help">Help & Feedback</Dropdown.Item>
@@ -130,18 +151,12 @@ export const Navbar = () => {
             ) : (
               <div className="flex gap-2">
                 <NextLink href="/login" passHref legacyBehavior>
-                  <Button
-                    className="text-sm font-normal"
-                    variant="secondary"
-                  >
+                  <Button className="text-sm font-normal" variant="secondary">
                     Sign In
                   </Button>
                 </NextLink>
                 <NextLink href="/login?mode=signup" passHref legacyBehavior>
-                  <Button
-                    className="text-sm font-bold shadow-lg shadow-primary/20"
-                    variant="primary"
-                  >
+                  <Button className="text-sm font-semibold rounded-xl" variant="primary">
                     Sign Up
                   </Button>
                 </NextLink>
@@ -185,14 +200,14 @@ export const Navbar = () => {
       </header>
 
       {isMenuOpen && (
-        <div className="border-t border-separator sm:hidden">
+        <div className="border-t border-divider sm:hidden">
           <div className="p-4">{searchInput}</div>
           <ul className="flex flex-col gap-2 px-4 pb-4">
             {user && (
               <li>
                 <NextLink
-                  className="block py-2 text-lg no-underline text-primary font-medium"
-                  href="/dashboard"
+                  className="block py-2 text-lg no-underline text-foreground font-medium"
+                  href="/dashboard/agent-aim"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard
@@ -204,11 +219,9 @@ export const Navbar = () => {
                 <Link
                   className={clsx(
                     "block py-2 text-lg no-underline",
-                    index === 2
-                      ? "text-accent"
-                      : index === siteConfig.navMenuItems.length - 1
-                        ? "text-danger"
-                        : "text-foreground",
+                    index === siteConfig.navMenuItems.length - 1
+                      ? "text-danger"
+                      : "text-foreground",
                   )}
                   href="#"
                 >
