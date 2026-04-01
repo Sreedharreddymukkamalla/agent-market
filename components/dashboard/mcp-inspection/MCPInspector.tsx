@@ -26,6 +26,12 @@ export default function MCPInspector() {
   const [error, setError] = useState("");
   const [logs, setLogs] = useState<any[]>([]);
 
+  const [showBuildModal, setShowBuildModal] = useState(false);
+  const [buildRepoUrl, setBuildRepoUrl] = useState("");
+  const [buildType, setBuildType] = useState<"HTTP" | "SSE" | "STDIO">("HTTP");
+  const [building, setBuilding] = useState(false);
+  const BUILD_TYPES = ["HTTP", "SSE", "STDIO"];
+
   const activeServer = servers.find((s) => s.id === activeServerId) || null;
   const connected = !!activeServer;
 
@@ -192,6 +198,38 @@ export default function MCPInspector() {
     if (connected) fetchTab(tab);
   };
 
+  const openBuildModal = () => {
+    setBuildRepoUrl("");
+    setBuildType("HTTP");
+    setShowBuildModal(true);
+  };
+
+  const closeBuildModal = () => setShowBuildModal(false);
+
+  const buildFromGit = async () => {
+    if (!buildRepoUrl.trim()) {
+      setError("Please provide a repository URL");
+      return;
+    }
+    setBuilding(true);
+    addLog("request", `Building MCP from ${buildRepoUrl} (${buildType})`);
+    try {
+      const res = await fetch('/api/mcp/build-from-git', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: buildRepoUrl, type: buildType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Build failed');
+      addLog('success', `Build started: ${data.message || 'ok'}`);
+      setShowBuildModal(false);
+    } catch (e: any) {
+      addLog('error', e.message || String(e));
+    } finally {
+      setBuilding(false);
+    }
+  };
+
   const callTool = async () => {
     if (!selectedTool || !activeServer) return;
     setCalling(true);
@@ -272,11 +310,11 @@ export default function MCPInspector() {
   };
 
   const getSchemaFields = (tool: any) => {
-    const props = tool?.inputSchema?.properties || {};
-    const required = tool?.inputSchema?.required || [];
-    return Object.entries(props).map(([key, schema]) => ({
+    const props = (tool?.inputSchema?.properties || {}) as Record<string, any>;
+    const required = (tool?.inputSchema?.required || []) as string[];
+    return Object.entries(props).map(([key, schema]: [string, any]) => ({
       key,
-      schema: { ...schema, required: required.includes(key) },
+      schema: { ...(schema as any), required: required.includes(key) },
     }));
   };
 
@@ -369,8 +407,8 @@ export default function MCPInspector() {
             />
             <Button
               className=""
-              onClick={connect}
-              disabled={connecting || !serverUrl.trim()}
+              onPress={() => connect()}
+              isDisabled={connecting || !serverUrl.trim()}
               style={styles.connectBtn(connecting || !serverUrl.trim())}
             >
               {connecting ? "Connecting…" : "Connect"}
@@ -381,10 +419,10 @@ export default function MCPInspector() {
             <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ color: colors.muted, fontSize: 12 }}>{activeServer?.url}</div>
             </div>
-            <Button style={styles.connectBtn(false)} onClick={() => fetchTab(activeTab)}>
+            <Button style={styles.connectBtn(false)} onPress={() => fetchTab(activeTab)}>
               Refresh
             </Button>
-            <Button variant="secondary" style={styles.disconnectBtn} onClick={disconnect}>
+            <Button variant="secondary" style={styles.disconnectBtn} onPress={disconnect}>
               Remove
             </Button>
           </>
@@ -426,7 +464,14 @@ export default function MCPInspector() {
               </div>
             )}
             {connected && activeItems.length === 0 && (
-              <div style={styles.emptyState}>No {activeTab.toLowerCase()} found</div>
+              <>
+                <div style={styles.emptyState}>No {activeTab.toLowerCase()} found</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+                  <Button variant="secondary" onPress={openBuildModal} style={{ padding: '6px 10px' }}>
+                    Build from Git
+                  </Button>
+                </div>
+              </>
             )}
             {activeItems.map((item: any) => (
               <button
@@ -480,8 +525,8 @@ export default function MCPInspector() {
 
                   <Button
                     style={styles.callBtn(calling)}
-                    onClick={callTool}
-                    disabled={calling}
+                    onPress={callTool}
+                    isDisabled={calling}
                   >
                     {calling ? "Running…" : "▶  Run Tool"}
                   </Button>
@@ -513,7 +558,7 @@ export default function MCPInspector() {
       <div style={styles.logPanel}>
         <div style={styles.logHeader}>
           <span>JSON-RPC Log</span>
-          <Button variant="secondary" style={styles.clearBtn} onClick={() => setLogs([])}>
+          <Button variant="secondary" style={styles.clearBtn} onPress={() => setLogs([])}>
             clear
           </Button>
         </div>
@@ -529,6 +574,49 @@ export default function MCPInspector() {
           ))}
         </div>
       </div>
+      {showBuildModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <div style={{ fontWeight: 700 }}>Build MCP from Git</div>
+            </div>
+            <div style={styles.modalBody}>
+              <div>
+                <label style={{ fontSize: 12, color: colors.muted }}>Repository URL</label>
+                <input
+                  style={styles.input}
+                  value={buildRepoUrl}
+                  onChange={(e) => setBuildRepoUrl(e.target.value)}
+                  placeholder="https://github.com/org/repo.git"
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, color: colors.muted }}>MCP Type</label>
+                <select
+                  value={buildType}
+                  onChange={(e) => setBuildType(e.target.value as any)}
+                  style={styles.input}
+                >
+                  {BUILD_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={styles.modalFooter}>
+                <Button variant="secondary" onPress={closeBuildModal} isDisabled={building}>
+                  Cancel
+                </Button>
+                <Button onPress={buildFromGit} isDisabled={building} style={{ marginLeft: 8 }}>
+                  {building ? "Building…" : "Build"}
+                </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -548,7 +636,7 @@ const C = {
   cyan: "#22d3ee",
 };
 
-function getStyles(C: any) {
+function getStyles(C: any): any {
   return {
   root: {
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
@@ -870,6 +958,32 @@ function getStyles(C: any) {
       : C.muted,
     lineHeight: 1.5,
   }),
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: 16,
+  },
+  modal: {
+    background: C.surface,
+    border: `1px solid ${C.border}`,
+    borderRadius: 8,
+    padding: 16,
+    width: 560,
+    maxWidth: "100%",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.6)",
+  },
+  modalHeader: {
+    borderBottom: `1px solid ${C.border}`,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  modalBody: { display: "flex", flexDirection: "column", gap: 12 },
+  modalFooter: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 },
   };
 }
 
