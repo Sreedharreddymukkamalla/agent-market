@@ -3,7 +3,293 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/**
+ * ChatGPT-style design system — full semantic token layer.
+ * Overrides HeroUI defaults; all components consume these variables.
+ */
+@layer base {
+  :root,
+  .light,
+  .default,
+  [data-theme="light"],
+  [data-theme="default"] {
+    color-scheme: light;
+
+    /* Raw neutrals (reference only) */
+    --white: oklch(100% 0 0);
+    --black: oklch(0% 0 0);
+
+    /* Typography & text scale (semantic — flips meaning via cascade) */
+    --text-primary: oklch(0.22 0.012 265);
+    --text-secondary: oklch(0.42 0.018 265);
+    --text-muted: oklch(0.52 0.022 265);
+    --text-subtle: oklch(0.58 0.02 265);
+
+    /* Surfaces */
+    --background: oklch(0.965 0.004 85);
+    --foreground: var(--text-primary);
+    --surface: oklch(0.995 0.002 85);
+    --surface-foreground: var(--text-primary);
+    --surface-secondary: oklch(0.975 0.004 85);
+    --surface-secondary-foreground: var(--text-primary);
+    --surface-tertiary: oklch(0.955 0.005 85);
+    --surface-tertiary-foreground: var(--text-primary);
+
+    --overlay: oklch(0.995 0.002 85);
+    --overlay-foreground: var(--text-primary);
+
+    --muted: var(--text-muted);
+    --scrollbar: oklch(0.72 0.012 265);
+
+    /* Muted surface / secondary controls */
+    --default: oklch(0.92 0.006 265);
+    --default-foreground: var(--text-primary);
+
+    /* Primary CTA: dark neutral fill (ChatGPT light) */
+    --accent: oklch(0.24 0.014 265);
+    --accent-foreground: oklch(0.99 0.002 265);
+
+    /* Sidebar */
+    --sidebar-bg: oklch(0.97 0.005 85);
+    --sidebar-border: oklch(0.9 0.006 265);
+    --sidebar-item-hover: oklch(0.93 0.006 265);
+    --sidebar-item-active: oklch(0.9 0.008 265);
+    --sidebar-fg-active: var(--text-primary);
+    /* ChatGPT-style profile chip (initials) */
+    --sidebar-user-avatar-bg: oklch(0.52 0.11 195);
+    --sidebar-user-avatar-fg: oklch(0.99 0.02 200);
+    /* Profile footer chip (slightly elevated vs sidebar — ChatGPT-style) */
+    --sidebar-profile-chip: oklch(0.935 0.005 85);
+    --sidebar-profile-chip-hover: oklch(0.915 0.006 265);
+
+    --logo-mark-bg: oklch(0.24 0.014 265);
+    --logo-mark-fg: oklch(0.99 0.002 265);
+
+    --scrim: oklch(0.22 0.02 265 / 0.45);
+
+    /* Fields */
+    --field-background: oklch(0.995 0.002 85);
+    --field-foreground: var(--text-primary);
+    --field-placeholder: oklch(0.52 0.022 265);
+    --field-border: oklch(0.86 0.01 265);
+
+    /* Status (muted, legible) */
+    --success: oklch(0.52 0.14 150);
+    --success-foreground: oklch(0.99 0.01 150);
+    --warning: oklch(0.62 0.14 85);
+    --warning-foreground: oklch(0.22 0.02 85);
+    --danger: oklch(0.52 0.18 25);
+    --danger-foreground: oklch(0.99 0.01 25);
+
+    --segment: oklch(0.98 0.004 85);
+    --segment-foreground: var(--text-primary);
+
+    --border: oklch(0.89 0.008 265);
+    --separator: oklch(0.9 0.008 265);
+    --focus: oklch(0.48 0.06 250);
+    --link: oklch(0.38 0.06 250);
+
+    --surface-shadow:
+      0 1px 2px 0 oklch(0% 0 0 / 0.04),
+      0 0 0 1px oklch(0% 0 0 / 0.03);
+    --overlay-shadow:
+      0 4px 24px oklch(0% 0 0 / 0.1),
+      0 0 0 1px oklch(0% 0 0 / 0.04);
+    --field-shadow: 0 0 0 0 transparent;
+
+    /* Scanner / tooling semantics */
+    --severity-critical: oklch(0.55 0.19 25);
+    --severity-high: oklch(0.58 0.17 55);
+    --severity-medium: oklch(0.62 0.14 85);
+    --severity-low: oklch(0.52 0.1 230);
+    --severity-info: oklch(0.52 0.02 265);
+    --severity-pass: oklch(0.52 0.14 150);
+    --severity-bg-critical: oklch(0.96 0.03 25);
+    --severity-bg-high: oklch(0.96 0.04 55);
+    --severity-bg-medium: oklch(0.96 0.04 85);
+    --severity-bg-low: oklch(0.95 0.03 230);
+    --severity-bg-info: oklch(0.94 0.01 265);
+    --severity-bg-pass: oklch(0.95 0.04 150);
+
+    --tool-bg: oklch(0.965 0.004 85);
+    --tool-surface: oklch(0.995 0.002 85);
+    --tool-border: oklch(0.88 0.01 265);
+    --tool-border-hover: oklch(0.82 0.012 265);
+    --tool-accent: oklch(0.32 0.02 265);
+    --tool-accent-hover: oklch(0.38 0.022 265);
+    --tool-green: oklch(0.48 0.14 150);
+    --tool-red: oklch(0.52 0.18 25);
+    --tool-orange: oklch(0.57 0.16 55);
+    --tool-cyan: oklch(0.5 0.1 230);
+    --tool-code-bg: oklch(0.96 0.008 85);
+    --tool-error-bg: oklch(0.96 0.04 25);
+    --tool-result-bg: oklch(0.96 0.02 265);
+
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: oklch(0.72 0.012 265);
+    --scrollbar-thumb-hover: oklch(0.62 0.014 265);
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    color-scheme: dark;
+
+    --text-primary: oklch(0.93 0.006 265);
+    --text-secondary: oklch(0.72 0.02 265);
+    --text-muted: oklch(0.62 0.022 265);
+    --text-subtle: oklch(0.55 0.02 265);
+
+    --background: oklch(0.24 0.012 265);
+    --foreground: var(--text-primary);
+    --surface: oklch(0.30 0.012 265);
+    --surface-foreground: var(--text-primary);
+    --surface-secondary: oklch(0.34 0.012 265);
+    --surface-secondary-foreground: var(--text-primary);
+    --surface-tertiary: oklch(0.38 0.012 265);
+    --surface-tertiary-foreground: var(--text-primary);
+
+    --overlay: oklch(0.30 0.012 265);
+    --overlay-foreground: var(--text-primary);
+
+    --muted: var(--text-muted);
+    --scrollbar: oklch(0.48 0.012 265);
+
+    --default: oklch(0.34 0.012 265);
+    --default-foreground: var(--text-primary);
+
+    /* Primary CTA: light neutral on dark */
+    --accent: oklch(0.93 0.008 265);
+    --accent-foreground: oklch(0.20 0.015 265);
+
+    --sidebar-bg: oklch(0.19 0.014 265);
+    --sidebar-border: oklch(0.32 0.012 265);
+    --sidebar-item-hover: oklch(0.26 0.014 265);
+    --sidebar-item-active: oklch(0.31 0.014 265);
+    --sidebar-fg-active: var(--text-primary);
+    --sidebar-user-avatar-bg: oklch(0.48 0.12 195);
+    --sidebar-user-avatar-fg: oklch(0.99 0.02 200);
+    --sidebar-profile-chip: oklch(0.24 0.014 265);
+    --sidebar-profile-chip-hover: oklch(0.30 0.014 265);
+
+    --logo-mark-bg: oklch(0.93 0.008 265);
+    --logo-mark-fg: oklch(0.20 0.015 265);
+
+    --scrim: oklch(0% 0 0 / 0.55);
+
+    --field-background: oklch(0.28 0.012 265);
+    --field-foreground: var(--text-primary);
+    --field-placeholder: oklch(0.55 0.02 265);
+    --field-border: oklch(0.40 0.014 265);
+
+    --success: oklch(0.58 0.12 150);
+    --success-foreground: oklch(0.16 0.03 150);
+    --warning: oklch(0.72 0.12 85);
+    --warning-foreground: oklch(0.20 0.03 85);
+    --danger: oklch(0.58 0.16 25);
+    --danger-foreground: oklch(0.98 0.01 25);
+
+    --segment: oklch(0.36 0.012 265);
+    --segment-foreground: var(--text-primary);
+
+    --border: oklch(0.36 0.012 265);
+    --separator: oklch(0.34 0.012 265);
+    --focus: oklch(0.72 0.08 250);
+    --link: oklch(0.75 0.08 250);
+
+    --surface-shadow: 0 0 0 1px oklch(100% 0 0 / 0.06);
+    --overlay-shadow:
+      0 8px 32px oklch(0% 0 0 / 0.4),
+      0 0 0 1px oklch(100% 0 0 / 0.08);
+    --field-shadow: 0 0 0 0 transparent;
+
+    --severity-bg-critical: oklch(0.22 0.04 25);
+    --severity-bg-high: oklch(0.24 0.04 55);
+    --severity-bg-medium: oklch(0.26 0.04 85);
+    --severity-bg-low: oklch(0.22 0.04 230);
+    --severity-bg-info: oklch(0.26 0.01 265);
+    --severity-bg-pass: oklch(0.22 0.04 150);
+
+    --tool-bg: oklch(0.22 0.012 265);
+    --tool-surface: oklch(0.28 0.012 265);
+    --tool-border: oklch(0.38 0.012 265);
+    --tool-border-hover: oklch(0.44 0.014 265);
+    --tool-accent: oklch(0.88 0.01 265);
+    --tool-accent-hover: oklch(0.93 0.008 265);
+    --tool-green: oklch(0.58 0.12 150);
+    --tool-red: oklch(0.58 0.16 25);
+    --tool-orange: oklch(0.62 0.14 55);
+    --tool-cyan: oklch(0.58 0.1 230);
+    --tool-code-bg: oklch(0.22 0.012 265);
+    --tool-error-bg: oklch(0.22 0.04 25);
+    --tool-result-bg: oklch(0.20 0.02 265);
+
+    --scrollbar-thumb: oklch(0.42 0.012 265);
+    --scrollbar-thumb-hover: oklch(0.52 0.014 265);
+  }
+
+  html {
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
+/* Tailwind color utilities mapped to ChatGPT tokens */
 @theme {
-	--font-sans: "font", sans-serif;
-	--font-mono: "monospace", monospace;
+  --font-sans: "font", sans-serif;
+  --font-mono: "monospace", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  /* Muted surface for bg-muted. Do not use text-muted for icon/text — use text-muted-foreground (--text-muted). */
+  --color-muted: var(--surface-secondary);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-divider: var(--separator);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--text-muted);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+
+  --color-default-50: var(--surface-secondary);
+  --color-default-100: var(--default);
+  --color-default-200: color-mix(in oklab, var(--border) 70%, var(--foreground) 30%);
+  --color-default-300: color-mix(in oklab, var(--border) 50%, var(--foreground) 50%);
+  --color-default-400: var(--text-subtle);
+  --color-default-500: var(--text-muted);
+  --color-default-600: var(--text-secondary);
+  --color-default-700: color-mix(in oklab, var(--foreground) 75%, var(--border) 25%);
+  --color-default-800: color-mix(in oklab, var(--foreground) 88%, var(--border) 12%);
+  --color-default-900: var(--text-primary);
+  --color-default-950: var(--text-primary);
+
+  --color-foreground-300: var(--text-secondary);
+  --color-foreground-400: var(--text-muted);
+  --color-foreground-500: var(--text-subtle);
 }

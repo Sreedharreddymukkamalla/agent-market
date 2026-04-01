@@ -30,7 +30,7 @@ function VerifyContent() {
       setError(verifyError.message);
       setLoading(false);
     } else {
-      router.push('/');
+      router.push('/dashboard/agent-aim');
       router.refresh();
     }
   };
@@ -53,11 +53,11 @@ function VerifyContent() {
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-6">
-      <Card className="w-full max-w-md p-8 shadow-2xl backdrop-blur-md bg-background/60">
+      <Card className="w-full max-w-md p-8 border border-divider bg-surface">
         <div className="flex flex-col gap-4 text-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Verify Your Email</h1>
           <p className="text-muted-foreground text-sm">
-            We've sent an 8-digit code to <span className="font-semibold text-primary">{email}</span>. 
+            We've sent an 8-digit code to <span className="font-semibold text-foreground">{email}</span>. 
             Enter it below to confirm your account.
           </p>
         </div>
@@ -82,7 +82,7 @@ function VerifyContent() {
             size="lg"
             type="submit"
             isPending={loading}
-            className="w-full font-semibold shadow-lg shadow-primary/20"
+            className="w-full font-semibold rounded-xl"
           >
             Verify Account
           </Button>
@@ -94,7 +94,7 @@ function VerifyContent() {
             <button
               type="button"
               onClick={handleResend}
-              className="font-medium text-primary hover:underline transition-all"
+              className="font-medium text-foreground underline-offset-4 hover:underline transition-all"
             >
               Resend Code
             </button>

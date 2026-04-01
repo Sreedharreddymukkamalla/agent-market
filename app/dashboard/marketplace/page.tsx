@@ -105,7 +105,7 @@ export default function MarketplacePage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Spinner size="lg" color="accent" />
+        <Spinner size="lg" color="current" />
         <p className="text-default-500 animate-pulse">Loading Agent MarketPlace templates...</p>
       </div>
     );
@@ -123,7 +123,7 @@ export default function MarketplacePage() {
           <TextField aria-label="Search templates" type="search">
             <InputGroup>
               <InputGroup.Prefix>
-                <SearchIcon className="text-muted" size={18} />
+                <SearchIcon className="text-muted-foreground" size={18} />
               </InputGroup.Prefix>
               <InputGroup.Input placeholder="Search templates..." />
             </InputGroup>
@@ -138,10 +138,13 @@ export default function MarketplacePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
           {templates.map((template) => (
-            <Card key={template.id} className="bg-background/60 backdrop-blur-md border border-divider p-6 shadow-sm hover:border-primary/50 transition-colors flex flex-col justify-between">
+            <Card
+              key={template.id}
+              className="bg-surface border border-divider p-6 transition-colors hover:bg-surface-secondary flex flex-col justify-between"
+            >
               <div>
                 <div className="flex justify-between items-start mb-4">
-                  <Chip size="sm" variant="soft" color="accent" className="font-bold">
+                  <Chip size="sm" variant="soft" color="default" className="font-medium">
                     {template.category}
                   </Chip>
                   <div className="flex items-center gap-1 text-xs text-default-400">

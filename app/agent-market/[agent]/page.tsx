@@ -8,6 +8,7 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 export default function Page({ params }: any) {
     const { agent } = params
 
+    const meta = AGENTS.find((a) => a.id === agent)
     const panel = (AgentPanels as any)[agent]
     if (!panel) {
         return (
@@ -31,7 +32,12 @@ export default function Page({ params }: any) {
                     </Link>
                 </div>
 
-                <h1 className="text-2xl font-bold mb-4">{agent}</h1>
+                <div className="mb-4 flex items-center gap-3">
+                    {meta?.icon && (
+                        <span className="text-3xl leading-none" aria-hidden>{meta.icon}</span>
+                    )}
+                    <h1 className="text-2xl font-bold text-default-900">{meta?.title ?? agent}</h1>
+                </div>
                 <Panel />
             </main>
         </DashboardLayout>

@@ -87,6 +87,98 @@ export function useStreamingCall(endpoint: string) {
     return { loading, statusMessages, result, error, call, reset }
 }
 
+/** Renders MCP stream items so text and images are visible in light/dark mode. */
+/** Result panel with header + clear; use for all streaming agent tabs. */
+export function MCPResultSection({
+  result,
+  onClear,
+  loading,
+}: {
+  result: MCPContentItem[] | null;
+  onClear: () => void;
+  loading: boolean;
+}) {
+  if (!result || loading) return null;
+  return (
+    <div className="bg-surface border border-divider rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-divider/50 bg-muted/30">
+        <span className="text-sm font-medium text-foreground flex items-center gap-2">
+          <span className="text-emerald-600 dark:text-emerald-400" aria-hidden>
+            {'\u2713'}
+          </span>{' '}
+          Result
+        </span>
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs text-muted-foreground hover:text-foreground transition"
+        >
+          Clear
+        </button>
+      </div>
+      <div className="p-5 max-h-[34rem] overflow-y-auto">
+        <MCPResultRenderer result={result} />
+      </div>
+    </div>
+  );
+}
+
+export function MCPResultRenderer({ result }: { result: MCPContentItem[] }) {
+  const hasRenderable = result.some(
+    (item) => item.type === "text" || item.type === "image",
+  );
+  if (!hasRenderable) {
+    return (
+      <pre className="text-sm leading-relaxed whitespace-pre-wrap font-mono text-default-900">
+        {JSON.stringify(result, null, 2)}
+      </pre>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {result.map((item, i) => {
+        if (item.type === "text") {
+          return (
+            <p
+              key={i}
+              className="whitespace-pre-wrap text-sm leading-relaxed text-default-900"
+            >
+              {item.text}
+            </p>
+          );
+        }
+        if (item.type === "image") {
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={`data:${item.mimeType};base64,${item.data}`}
+              alt="Result"
+              className="max-h-[min(70vh,32rem)] max-w-full rounded-xl border border-divider bg-[var(--surface-secondary)] object-contain shadow-sm"
+            />
+          );
+        }
+        return (
+          <pre
+            key={i}
+            className="rounded-lg bg-[var(--tool-code-bg)] p-3 text-xs text-default-800"
+          >
+            {JSON.stringify(item, null, 2)}
+          </pre>
+        );
+      })}
+      <details className="rounded-lg border border-divider bg-[var(--surface-secondary)] text-xs text-default-600">
+        <summary className="cursor-pointer px-3 py-2 font-medium text-default-800">
+          Raw JSON
+        </summary>
+        <pre className="max-h-48 overflow-auto border-t border-divider p-3 font-mono text-[11px] text-default-900">
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 export function StatusStream({ loading, messages }: { loading: boolean; messages: string[] }) {
     if (!loading && messages.length === 0) return null
     return (
@@ -97,8 +189,8 @@ export function StatusStream({ loading, messages }: { loading: boolean; messages
                     <div
                         key={i}
                         className={`flex items-center gap-2.5 text-sm px-4 py-2.5 rounded-lg border transition-all ${isLast
-                            ? 'text-foreground bg-muted/60 border-border'
-                            : 'text-muted-foreground bg-muted/30 border-border/30'
+                            ? 'text-foreground bg-muted/60 border-divider'
+                            : 'text-muted-foreground bg-muted/30 border-divider/30'
                             }`}
                     >
                         {isLast ? (
@@ -119,7 +211,7 @@ export function StatusStream({ loading, messages }: { loading: boolean; messages
 
 export function ErrorBox({ error }: { error: string }) {
     return (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-5 py-4 text-sm text-destructive flex items-start gap-3">
+        <div className="rounded-xl border border-danger/35 bg-danger/10 px-5 py-4 text-sm text-danger flex items-start gap-3 dark:border-danger/40 dark:bg-danger/15">
             <span className="text-lg flex-shrink-0">{'\u26A0\uFE0F'}</span>
             <div>
                 <div className="font-semibold mb-1">Error</div>
@@ -146,14 +238,14 @@ export function YouTubeTab() {
     ]
 
     const YT_ACTIONS = [
-        { id: 'get_video_info', label: 'Video Info', icon: '\u{1F3AC}', description: 'Title, author, description & metadata', color: 'from-violet-600 to-purple-600' },
-        { id: 'get_transcript', label: 'Transcript', icon: '\u{1F4DD}', description: 'Full plain-text transcript', color: 'from-blue-600 to-cyan-600' },
-        { id: 'get_timed_transcript', label: 'Timed Transcript', icon: '\u23F1\uFE0F', description: 'Transcript with timestamps', color: 'from-emerald-600 to-teal-600' },
+        { id: 'get_video_info', label: 'Video Info', icon: '\u{1F3AC}', description: 'Title, author, description & metadata' },
+        { id: 'get_transcript', label: 'Transcript', icon: '\u{1F4DD}', description: 'Full plain-text transcript' },
+        { id: 'get_timed_transcript', label: 'Timed Transcript', icon: '\u23F1\uFE0F', description: 'Transcript with timestamps' },
     ]
 
     return (
         <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-sm">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-5">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground" htmlFor="yt-url">YouTube URL</label>
                     <div className="relative">
@@ -164,7 +256,7 @@ export function YouTubeTab() {
                             value={url}
                             onChange={(e) => { setUrl(e.target.value); reset() }}
                             placeholder="https://www.youtube.com/watch?v=..."
-                            className="w-full bg-muted/70 border border-border rounded-xl pl-9 pr-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/40 transition"
+                            className="w-full bg-muted/70 border border-divider rounded-xl pl-9 pr-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background transition"
                             disabled={loading}
                         />
                     </div>
@@ -173,7 +265,7 @@ export function YouTubeTab() {
                             <button
                                 key={ex.url}
                                 onClick={() => { setUrl(ex.url); reset() }}
-                                className="text-xs text-muted-foreground hover:text-foreground bg-muted hover:bg-muted border border-border rounded-full px-3 py-1 transition"
+                                className="text-xs text-muted-foreground hover:text-foreground bg-muted hover:bg-muted border border-divider rounded-full px-3 py-1 transition"
                             >
                                 {ex.label}
                             </button>
@@ -193,7 +285,7 @@ export function YouTubeTab() {
                         onChange={(e) => setLang(e.target.value)}
                         placeholder="en"
                         maxLength={10}
-                        className="w-28 bg-muted/70 border border-border rounded-xl px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/40 transition"
+                        className="w-28 bg-muted/70 border border-divider rounded-xl px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background transition"
                         disabled={loading}
                     />
                 </div>
@@ -204,12 +296,11 @@ export function YouTubeTab() {
                             key={action.id}
                             onClick={() => runAction(action.id)}
                             disabled={loading || !url.trim()}
-                            className={`group relative overflow-hidden rounded-xl p-4 text-left transition-all duration-200 bg-gradient-to-br ${action.color} hover:scale-[1.02] hover:shadow-lg active:scale-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
+                            className="rounded-xl border border-divider bg-surface p-4 text-left text-foreground transition-colors hover:bg-muted/60 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed dark:hover:bg-muted/40"
                         >
-                            <div className="text-2xl mb-2">{action.icon}</div>
-                            <div className="font-semibold text-sm">{action.label}</div>
-                            <div className="text-xs opacity-80 mt-0.5">{action.description}</div>
-                            <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
+                            <div className="text-2xl mb-2" aria-hidden>{action.icon}</div>
+                            <div className="font-semibold text-sm text-default-900">{action.label}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{action.description}</div>
                         </button>
                     ))}
                 </div>
@@ -218,19 +309,7 @@ export function YouTubeTab() {
             <StatusStream loading={loading} messages={statusMessages} />
             {error && <ErrorBox error={error} />}
 
-            {result && !loading && (
-                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 bg-muted/30">
-                        <span className="text-sm font-medium text-foreground flex items-center gap-2">
-                            <span className="text-emerald-600 dark:text-emerald-400">{'\u2713'}</span> Result
-                        </span>
-                        <button onClick={reset} className="text-xs text-muted-foreground hover:text-foreground transition">Clear</button>
-                    </div>
-                    <div className="p-5 max-h-[34rem] overflow-y-auto">
-                        <pre className="text-sm text-foreground whitespace-pre-wrap font-mono leading-relaxed">{JSON.stringify(result, null, 2)}</pre>
-                    </div>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
 
         </div>
     )
@@ -240,10 +319,10 @@ export function YouTubeTab() {
 // Perplexity types
 type PerplexityTool = 'perplexity_ask' | 'perplexity_reason' | 'perplexity_research'
 
-const PERPLEXITY_TOOLS: { id: PerplexityTool; label: string; icon: string; description: string; color: string }[] = [
-    { id: 'perplexity_ask', label: 'Ask', icon: '\u{1F50D}', description: 'Fast web-grounded answer', color: 'from-sky-600 to-blue-600' },
-    { id: 'perplexity_reason', label: 'Reason', icon: '\u{1F9E0}', description: 'Deep reasoning over your question', color: 'from-violet-600 to-purple-600' },
-    { id: 'perplexity_research', label: 'Research', icon: '\u{1F4DA}', description: 'In-depth multi-source research', color: 'from-emerald-600 to-teal-600' },
+const PERPLEXITY_TOOLS: { id: PerplexityTool; label: string; icon: string; description: string }[] = [
+    { id: 'perplexity_ask', label: 'Ask', icon: '\u{1F50D}', description: 'Fast web-grounded answer' },
+    { id: 'perplexity_reason', label: 'Reason', icon: '\u{1F9E0}', description: 'Deep reasoning over your question' },
+    { id: 'perplexity_research', label: 'Research', icon: '\u{1F4DA}', description: 'In-depth multi-source research' },
 ]
 
 const PERPLEXITY_EXAMPLE_QUERIES = [
@@ -261,13 +340,13 @@ type WikipediaTool =
     | 'get_related_topics'
     | 'summarize_article_for_query'
 
-const WIKIPEDIA_TOOLS: { id: WikipediaTool; label: string; icon: string; description: string; color: string; argLabel: string; argPlaceholder: string }[] = [
-    { id: 'search_wikipedia', label: 'Search', icon: '\u{1F50E}', description: 'Search Wikipedia for articles', color: 'from-blue-600 to-sky-600', argLabel: 'Search query', argPlaceholder: 'e.g. Quantum computing' },
-    { id: 'get_summary', label: 'Summary', icon: '\u{1F4C4}', description: 'Get a concise summary of an article', color: 'from-emerald-600 to-teal-600', argLabel: 'Article title', argPlaceholder: 'e.g. Albert Einstein' },
-    { id: 'get_article', label: 'Full Article', icon: '\u{1F4DA}', description: 'Retrieve the full article content', color: 'from-violet-600 to-purple-600', argLabel: 'Article title', argPlaceholder: 'e.g. JavaScript' },
-    { id: 'extract_key_facts', label: 'Key Facts', icon: '\u{1F9E0}', description: 'Extract key facts from an article', color: 'from-amber-600 to-orange-600', argLabel: 'Article title', argPlaceholder: 'e.g. Black hole' },
-    { id: 'get_related_topics', label: 'Related Topics', icon: '\u{1F517}', description: 'Get related topics via links & categories', color: 'from-pink-600 to-rose-600', argLabel: 'Article title', argPlaceholder: 'e.g. Machine learning' },
-    { id: 'summarize_article_for_query', label: 'Query Summary', icon: '\u{1F4AC}', description: 'Article snippet focused on your specific query', color: 'from-cyan-600 to-blue-500', argLabel: 'Topic & query', argPlaceholder: 'e.g. Einstein relativity' },
+const WIKIPEDIA_TOOLS: { id: WikipediaTool; label: string; icon: string; description: string; argLabel: string; argPlaceholder: string }[] = [
+    { id: 'search_wikipedia', label: 'Search', icon: '\u{1F50E}', description: 'Search Wikipedia for articles', argLabel: 'Search query', argPlaceholder: 'e.g. Quantum computing' },
+    { id: 'get_summary', label: 'Summary', icon: '\u{1F4C4}', description: 'Get a concise summary of an article', argLabel: 'Article title', argPlaceholder: 'e.g. Albert Einstein' },
+    { id: 'get_article', label: 'Full Article', icon: '\u{1F4DA}', description: 'Retrieve the full article content', argLabel: 'Article title', argPlaceholder: 'e.g. JavaScript' },
+    { id: 'extract_key_facts', label: 'Key Facts', icon: '\u{1F9E0}', description: 'Extract key facts from an article', argLabel: 'Article title', argPlaceholder: 'e.g. Black hole' },
+    { id: 'get_related_topics', label: 'Related Topics', icon: '\u{1F517}', description: 'Get related topics via links & categories', argLabel: 'Article title', argPlaceholder: 'e.g. Machine learning' },
+    { id: 'summarize_article_for_query', label: 'Query Summary', icon: '\u{1F4AC}', description: 'Article snippet focused on your specific query', argLabel: 'Topic & query', argPlaceholder: 'e.g. Einstein relativity' },
 ]
 
 const WIKIPEDIA_EXAMPLES: { tool: WikipediaTool; label: string; value: string }[] = [
@@ -281,9 +360,9 @@ const WIKIPEDIA_EXAMPLES: { tool: WikipediaTool; label: string; value: string }[
 // Airbnb types
 type AirbnbTool = 'airbnb_search' | 'airbnb_listing_details'
 
-const AIRBNB_TOOLS: { id: AirbnbTool; label: string; icon: string; description: string; color: string }[] = [
-    { id: 'airbnb_search', label: 'Search Listings', icon: '\u{1F50D}', description: 'Search by location with filters', color: 'from-rose-600 to-pink-600' },
-    { id: 'airbnb_listing_details', label: 'Listing Details', icon: '\u{1F3E0}', description: 'Full details for a specific listing ID', color: 'from-orange-600 to-amber-600' },
+const AIRBNB_TOOLS: { id: AirbnbTool; label: string; icon: string; description: string }[] = [
+    { id: 'airbnb_search', label: 'Search Listings', icon: '\u{1F50D}', description: 'Search by location with filters' },
+    { id: 'airbnb_listing_details', label: 'Listing Details', icon: '\u{1F3E0}', description: 'Full details for a specific listing ID' },
 ]
 
 const AIRBNB_LOCATION_EXAMPLES = [
@@ -296,11 +375,11 @@ const AIRBNB_LOCATION_EXAMPLES = [
 // HackerNews types
 type HackerNewsTool = 'search_stories' | 'get_stories' | 'get_story_info' | 'get_user_info'
 
-const HN_TOOLS: { id: HackerNewsTool; label: string; icon: string; description: string; color: string }[] = [
-    { id: 'search_stories', label: 'Search Stories', icon: '\u{1F50D}', description: 'Search stories by keyword', color: 'from-orange-600 to-amber-600' },
-    { id: 'get_stories', label: 'Browse Stories', icon: '\u{1F4CB}', description: 'Top, new, Ask HN or Show HN stories', color: 'from-rose-600 to-orange-600' },
-    { id: 'get_story_info', label: 'Story Details', icon: '\u{1F4AC}', description: 'Full story and comments by ID', color: 'from-violet-600 to-purple-600' },
-    { id: 'get_user_info', label: 'User Profile', icon: '\u{1F464}', description: 'Profile and submitted stories for a user', color: 'from-teal-600 to-cyan-600' },
+const HN_TOOLS: { id: HackerNewsTool; label: string; icon: string; description: string }[] = [
+    { id: 'search_stories', label: 'Search Stories', icon: '\u{1F50D}', description: 'Search stories by keyword' },
+    { id: 'get_stories', label: 'Browse Stories', icon: '\u{1F4CB}', description: 'Top, new, Ask HN or Show HN stories' },
+    { id: 'get_story_info', label: 'Story Details', icon: '\u{1F4AC}', description: 'Full story and comments by ID' },
+    { id: 'get_user_info', label: 'User Profile', icon: '\u{1F464}', description: 'Profile and submitted stories for a user' },
 ]
 
 const HN_STORY_TYPES = [
@@ -321,10 +400,10 @@ const HN_EXAMPLES: { tool: HackerNewsTool; label: string; value: string }[] = [
 type PaperMode = 'search' | 'read' | 'download'
 type PaperSource = 'arxiv' | 'pubmed' | 'biorxiv' | 'medrxiv' | 'semantic' | 'crossref' | 'google_scholar' | 'iacr'
 
-const PAPER_MODES: { id: PaperMode; label: string; icon: string; description: string; color: string }[] = [
-    { id: 'search', label: 'Search', icon: '\u{1F50D}', description: 'Search by keyword across a database', color: 'from-indigo-600 to-blue-600' },
-    { id: 'read', label: 'Read Paper', icon: '\u{1F4C4}', description: 'Extract full text from a paper by ID', color: 'from-emerald-600 to-teal-600' },
-    { id: 'download', label: 'Download PDF', icon: '\u{1F4E5}', description: 'Download PDF of a paper by ID', color: 'from-violet-600 to-purple-600' },
+const PAPER_MODES: { id: PaperMode; label: string; icon: string; description: string }[] = [
+    { id: 'search', label: 'Search', icon: '\u{1F50D}', description: 'Search by keyword across a database' },
+    { id: 'read', label: 'Read Paper', icon: '\u{1F4C4}', description: 'Extract full text from a paper by ID' },
+    { id: 'download', label: 'Download PDF', icon: '\u{1F4E5}', description: 'Download PDF of a paper by ID' },
 ]
 
 const PAPER_SOURCES: { id: PaperSource; label: string; modesSupported: PaperMode[] }[] = [
@@ -358,7 +437,7 @@ export function PerplexityTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-sm">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-5">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Ask anything</label>
                     <textarea
@@ -366,12 +445,12 @@ export function PerplexityTab() {
                         onChange={(e) => { setQuery(e.target.value); reset() }}
                         placeholder="What would you like to know?"
                         rows={3}
-                        className="w-full bg-muted/70 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none"
+                        className="w-full bg-muted/70 border border-divider rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none"
                         disabled={loading}
                     />
                     <div className="flex flex-wrap gap-2">
                         {PERPLEXITY_EXAMPLE_QUERIES.map((q) => (
-                            <button key={q} onClick={() => { setQuery(q); reset() }} className="text-xs text-muted-foreground hover:text-foreground bg-muted border border-border rounded-full px-3 py-1">{q.length > 52 ? q.slice(0, 51) + '\u2026' : q}</button>
+                            <button key={q} onClick={() => { setQuery(q); reset() }} className="text-xs text-muted-foreground hover:text-foreground bg-muted border border-divider rounded-full px-3 py-1">{q.length > 52 ? q.slice(0, 51) + '\u2026' : q}</button>
                         ))}
                     </div>
                 </div>
@@ -380,28 +459,22 @@ export function PerplexityTab() {
                     <label className="text-sm font-medium text-foreground">Mode</label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {PERPLEXITY_TOOLS.map((t) => (
-                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`group relative overflow-hidden rounded-xl p-4 text-left transition-all duration-200 ${tool === t.id ? `${t.color} ring-2 ring-white/30 scale-[1.02] shadow-lg` : 'from-muted to-muted/80 opacity-60 hover:opacity-90'}`}>
-                                <div className="text-2xl mb-2">{t.icon}</div>
-                                <div className="font-semibold text-sm">{t.label}</div>
-                                <div className="text-xs opacity-80 mt-0.5">{t.description}</div>
+                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`rounded-xl border border-divider p-4 text-left transition-colors ${tool === t.id ? 'bg-default ring-2 ring-focus' : 'bg-surface hover:bg-muted/50 dark:hover:bg-muted/30'}`}>
+                                <div className="text-2xl mb-2" aria-hidden>{t.icon}</div>
+                                <div className="font-semibold text-sm text-default-900">{t.label}</div>
+                                <div className="text-xs text-muted-foreground mt-0.5">{t.description}</div>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <button onClick={ask} disabled={loading || !query.trim()} className={`w-full rounded-xl py-3.5 font-semibold text-sm ${PERPLEXITY_TOOLS.find((p) => p.id === tool)?.color ?? 'from-sky-600 to-blue-600'}`}> {loading ? 'Running...' : `${PERPLEXITY_TOOLS.find((p) => p.id === tool)?.icon} ${PERPLEXITY_TOOLS.find((p) => p.id === tool)?.label} with Perplexity`}</button>
+                <button onClick={ask} disabled={loading || !query.trim()} className="w-full rounded-xl py-3.5 font-semibold text-sm bg-primary text-primary-foreground disabled:opacity-50"> {loading ? 'Running...' : `${PERPLEXITY_TOOLS.find((p) => p.id === tool)?.icon} ${PERPLEXITY_TOOLS.find((p) => p.id === tool)?.label} with Perplexity`}</button>
             </div>
 
             <StatusStream loading={loading} messages={statusMessages} />
             {error && <ErrorBox error={error} />}
 
-            {result && !loading && (
-                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                    <div className="p-5 max-h-[34rem] overflow-y-auto">
-                        <pre className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{JSON.stringify(result, null, 2)}</pre>
-                    </div>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
         </div>
     )
 }
@@ -421,14 +494,14 @@ export function WikipediaTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4 shadow-sm">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-4">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Tool</label>
                     <div className="grid grid-cols-2 gap-3">
                         {WIKIPEDIA_TOOLS.map((t) => (
-                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`group rounded-xl p-3 ${tool === t.id ? `${t.color} text-white` : 'bg-muted'}`}>
-                                <div className="font-semibold text-sm">{t.icon} {t.label}</div>
-                                <div className="text-xs opacity-80">{t.description}</div>
+                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`rounded-xl border border-divider p-3 text-left transition-colors ${tool === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                                <div className="font-semibold text-sm"><span aria-hidden>{t.icon}</span> {t.label}</div>
+                                <div className={`text-xs mt-0.5 ${tool === t.id ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>{t.description}</div>
                             </button>
                         ))}
                     </div>
@@ -436,28 +509,24 @@ export function WikipediaTab() {
 
                 <div>
                     <label className="text-sm font-medium text-foreground">{selected.argLabel}</label>
-                    <input value={input} onChange={(e) => { setInput(e.target.value); reset() }} placeholder={selected.argPlaceholder} className="w-full bg-muted/70 border border-border rounded-xl px-4 py-2 text-sm" disabled={loading} />
+                    <input value={input} onChange={(e) => { setInput(e.target.value); reset() }} placeholder={selected.argPlaceholder} className="w-full bg-muted/70 border border-divider rounded-xl px-4 py-2 text-sm" disabled={loading} />
                     <div className="flex flex-wrap gap-2 mt-2">
                         {WIKIPEDIA_EXAMPLES.map((ex) => (
-                            <button key={ex.label} onClick={() => { setInput(ex.value); reset() }} className="text-xs bg-muted border border-border rounded-full px-3 py-1">{ex.label}</button>
+                            <button type="button" key={ex.label} onClick={() => { setInput(ex.value); reset() }} className="text-xs text-foreground bg-muted border border-divider rounded-full px-3 py-1 hover:bg-muted/80">{ex.label}</button>
                         ))}
                     </div>
                 </div>
 
                 <div className="flex gap-2">
-                    <button onClick={run} disabled={loading || !input.trim()} className="px-4 py-2 rounded-lg bg-primary text-white">Run</button>
-                    <button onClick={reset} className="px-3 py-2 rounded-lg border">Clear</button>
+                    <button onClick={run} disabled={loading || !input.trim()} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground">Run</button>
+                    <button type="button" onClick={reset} className="px-3 py-2 rounded-lg border border-divider text-foreground hover:bg-muted/50 transition">Clear</button>
                 </div>
             </div>
 
             <StatusStream loading={loading} messages={statusMessages} />
             {error && <ErrorBox error={error} />}
 
-            {result && !loading && (
-                <div className="p-4 bg-muted/30 rounded">
-                    <pre className="text-sm whitespace-pre-wrap font-mono">{JSON.stringify(result, null, 2)}</pre>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
         </div>
     )
 }
@@ -483,14 +552,14 @@ export function AirbnbTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4 shadow-sm">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-4">
                 <div>
                     <label className="text-sm font-medium text-foreground">Tool</label>
                     <div className="grid grid-cols-2 gap-3">
                         {AIRBNB_TOOLS.map((t) => (
-                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`group rounded-xl p-3 ${tool === t.id ? `${t.color} text-white` : 'bg-muted'}`}>
-                                <div className="font-semibold text-sm">{t.icon} {t.label}</div>
-                                <div className="text-xs opacity-80">{t.description}</div>
+                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`rounded-xl border border-divider p-3 text-left transition-colors ${tool === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                                <div className="font-semibold text-sm"><span aria-hidden>{t.icon}</span> {t.label}</div>
+                                <div className={`text-xs mt-0.5 ${tool === t.id ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>{t.description}</div>
                             </button>
                         ))}
                     </div>
@@ -499,34 +568,30 @@ export function AirbnbTab() {
                 {isSearch ? (
                     <div>
                         <label className="text-sm font-medium text-foreground">Location</label>
-                        <input value={location} onChange={(e) => { setLocation(e.target.value); reset() }} placeholder="e.g. Paris, France" className="w-full bg-muted/70 border border-border rounded-xl px-4 py-2 text-sm" disabled={loading} />
+                        <input value={location} onChange={(e) => { setLocation(e.target.value); reset() }} placeholder="e.g. Paris, France" className="w-full bg-muted/70 border border-divider rounded-xl px-4 py-2 text-sm" disabled={loading} />
                         <div className="flex flex-wrap gap-2 mt-2">
                             {AIRBNB_LOCATION_EXAMPLES.map((loc) => (
-                                <button key={loc} onClick={() => { setLocation(loc); reset() }} className="text-xs bg-muted border border-border rounded-full px-3 py-1">{loc}</button>
+                                <button type="button" key={loc} onClick={() => { setLocation(loc); reset() }} className="text-xs text-foreground bg-muted border border-divider rounded-full px-3 py-1 hover:bg-muted/80">{loc}</button>
                             ))}
                         </div>
                     </div>
                 ) : (
                     <div>
                         <label className="text-sm font-medium text-foreground">Listing ID</label>
-                        <input value={listingId} onChange={(e) => { setListingId(e.target.value); reset() }} placeholder="e.g. 12345678" className="w-full bg-muted/70 border border-border rounded-xl px-4 py-2 text-sm" disabled={loading} />
+                        <input value={listingId} onChange={(e) => { setListingId(e.target.value); reset() }} placeholder="e.g. 12345678" className="w-full bg-muted/70 border border-divider rounded-xl px-4 py-2 text-sm" disabled={loading} />
                     </div>
                 )}
 
                 <div className="flex gap-2">
-                    <button onClick={run} disabled={loading} className="px-4 py-2 rounded-lg bg-primary text-white">Run</button>
-                    <button onClick={reset} className="px-3 py-2 rounded-lg border">Clear</button>
+                    <button onClick={run} disabled={loading} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground">Run</button>
+                    <button type="button" onClick={reset} className="px-3 py-2 rounded-lg border border-divider text-foreground hover:bg-muted/50 transition">Clear</button>
                 </div>
             </div>
 
             <StatusStream loading={loading} messages={statusMessages} />
             {error && <ErrorBox error={error} />}
 
-            {result && !loading && (
-                <div className="p-4 bg-muted/30 rounded">
-                    <pre className="text-sm whitespace-pre-wrap font-mono">{JSON.stringify(result, null, 2)}</pre>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
         </div>
     )
 }
@@ -547,14 +612,14 @@ export function HackerNewsTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4 shadow-sm">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-4">
                 <div>
                     <label className="text-sm font-medium text-foreground">Tool</label>
                     <div className="grid grid-cols-2 gap-3">
                         {HN_TOOLS.map((t) => (
-                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`group rounded-xl p-3 ${tool === t.id ? `${t.color} text-white` : 'bg-muted'}`}>
-                                <div className="font-semibold text-sm">{t.icon} {t.label}</div>
-                                <div className="text-xs opacity-80">{t.description}</div>
+                            <button key={t.id} onClick={() => { setTool(t.id); reset() }} disabled={loading} className={`rounded-xl border border-divider p-3 text-left transition-colors ${tool === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                                <div className="font-semibold text-sm"><span aria-hidden>{t.icon}</span> {t.label}</div>
+                                <div className={`text-xs mt-0.5 ${tool === t.id ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>{t.description}</div>
                             </button>
                         ))}
                     </div>
@@ -565,31 +630,27 @@ export function HackerNewsTab() {
                         <label className="text-sm font-medium text-foreground">Story Type</label>
                         <div className="flex gap-2 mt-2">
                             {HN_STORY_TYPES.map((s) => (
-                                <button key={s.id} onClick={() => setStoryType(s.id)} className={`text-xs px-3 py-1 rounded-full border ${storyType === s.id ? 'bg-primary text-white' : 'bg-muted'}`}>{s.label}</button>
+                                <button key={s.id} type="button" onClick={() => setStoryType(s.id)} className={`text-xs px-3 py-1 rounded-full border border-divider ${storyType === s.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{s.label}</button>
                             ))}
                         </div>
                     </div>
                 ) : (
                     <div>
                         <label className="text-sm font-medium text-foreground">Query / ID / Username</label>
-                        <input value={query} onChange={(e) => { setQuery(e.target.value); reset() }} placeholder="e.g. TypeScript, 39827987, dang" className="w-full bg-muted/70 border border-border rounded-xl px-4 py-2 text-sm" disabled={loading} />
+                        <input value={query} onChange={(e) => { setQuery(e.target.value); reset() }} placeholder="e.g. TypeScript, 39827987, dang" className="w-full bg-muted/70 border border-divider rounded-xl px-4 py-2 text-sm" disabled={loading} />
                     </div>
                 )}
 
                 <div className="flex gap-2">
-                    <button onClick={run} disabled={loading || (tool !== 'get_stories' && !query.trim())} className="px-4 py-2 rounded-lg bg-primary text-white">Run</button>
-                    <button onClick={reset} className="px-3 py-2 rounded-lg border">Clear</button>
+                    <button onClick={run} disabled={loading || (tool !== 'get_stories' && !query.trim())} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground">Run</button>
+                    <button type="button" onClick={reset} className="px-3 py-2 rounded-lg border border-divider text-foreground hover:bg-muted/50 transition">Clear</button>
                 </div>
             </div>
 
             <StatusStream loading={loading} messages={statusMessages} />
             {error && <ErrorBox error={error} />}
 
-            {result && !loading && (
-                <div className="p-4 bg-muted/30 rounded">
-                    <pre className="text-sm whitespace-pre-wrap font-mono">{JSON.stringify(result, null, 2)}</pre>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
         </div>
     )
 }
@@ -608,12 +669,12 @@ export function PaperSearchTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6 space-y-4 shadow-sm">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-4">
                 <div>
                     <label className="text-sm font-medium text-foreground">Mode</label>
                     <div className="flex gap-2 mt-2">
                         {PAPER_MODES.map((m) => (
-                            <button key={m.id} onClick={() => setMode(m.id)} className={`text-xs px-3 py-1 rounded-full border ${mode === m.id ? 'bg-primary text-white' : 'bg-muted'}`}>{m.label}</button>
+                            <button key={m.id} type="button" onClick={() => setMode(m.id)} className={`text-xs px-3 py-1 rounded-full border border-divider ${mode === m.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{m.label}</button>
                         ))}
                     </div>
                 </div>
@@ -622,35 +683,31 @@ export function PaperSearchTab() {
                     <label className="text-sm font-medium text-foreground">Source</label>
                     <div className="flex gap-2 mt-2 flex-wrap">
                         {PAPER_SOURCES.map((s) => (
-                            <button key={s.id} onClick={() => setSource(s.id)} className={`text-xs px-3 py-1 rounded-full border ${source === s.id ? 'bg-primary text-white' : 'bg-muted'}`}>{s.label}</button>
+                            <button key={s.id} type="button" onClick={() => setSource(s.id)} className={`text-xs px-3 py-1 rounded-full border border-divider ${source === s.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{s.label}</button>
                         ))}
                     </div>
                 </div>
 
                 <div>
                     <label className="text-sm font-medium text-foreground">Query or ID</label>
-                    <input value={query} onChange={(e) => { setQuery(e.target.value); reset() }} placeholder="e.g. transformer attention" className="w-full bg-muted/70 border border-border rounded-xl px-4 py-2 text-sm" disabled={loading} />
+                    <input value={query} onChange={(e) => { setQuery(e.target.value); reset() }} placeholder="e.g. transformer attention" className="w-full bg-muted/70 border border-divider rounded-xl px-4 py-2 text-sm" disabled={loading} />
                     <div className="flex flex-wrap gap-2 mt-2">
                         {PAPER_SEARCH_EXAMPLES.map((ex) => (
-                            <button key={ex} onClick={() => { setQuery(ex); reset() }} className="text-xs bg-muted border border-border rounded-full px-3 py-1">{ex}</button>
+                            <button type="button" key={ex} onClick={() => { setQuery(ex); reset() }} className="text-xs text-foreground bg-muted border border-divider rounded-full px-3 py-1 hover:bg-muted/80">{ex}</button>
                         ))}
                     </div>
                 </div>
 
                 <div className="flex gap-2">
-                    <button onClick={run} disabled={loading || !query.trim()} className="px-4 py-2 rounded-lg bg-primary text-white">Run</button>
-                    <button onClick={reset} className="px-3 py-2 rounded-lg border">Clear</button>
+                    <button onClick={run} disabled={loading || !query.trim()} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground">Run</button>
+                    <button type="button" onClick={reset} className="px-3 py-2 rounded-lg border border-divider text-foreground hover:bg-muted/50 transition">Clear</button>
                 </div>
             </div>
 
             <StatusStream loading={loading} messages={statusMessages} />
             {error && <ErrorBox error={error} />}
 
-            {result && !loading && (
-                <div className="p-4 bg-muted/30 rounded">
-                    <pre className="text-sm whitespace-pre-wrap font-mono">{JSON.stringify(result, null, 2)}</pre>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
         </div>
     )
 }
@@ -706,53 +763,53 @@ export function GenericAgentPanel({ title, endpoint, example, placeholder, agent
     }
 
     return (
-        <div className="bg-card border border-border rounded-2xl p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{title}</h3>
-                <div className="text-sm text-muted-foreground">{endpoint}</div>
+        <div className="space-y-6">
+            <div className="bg-surface border border-divider rounded-2xl p-6 space-y-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="text-lg font-semibold text-default-900">{title}</h3>
+                    <div className="text-xs sm:text-sm text-muted-foreground font-mono break-all">{endpoint}</div>
+                </div>
+
+                {tools && tools.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {tools.map((t) => (
+                            <button
+                                key={t}
+                                type="button"
+                                onClick={() => setSelectedTool(t)}
+                                className={`text-xs px-3 py-1 rounded-full border border-divider ${selectedTool === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                    <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={placeholder ?? 'Enter input'} className="flex-1 bg-muted/70 border border-divider rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground" disabled={loading} />
+                    <div className="flex gap-2 shrink-0">
+                        <button type="button" onClick={run} disabled={loading} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-50">Run</button>
+                        <button type="button" onClick={reset} className="px-3 py-2 rounded-lg border border-divider text-foreground hover:bg-muted/50 transition" disabled={loading}>Clear</button>
+                    </div>
+                </div>
+
+                <StatusStream loading={loading} messages={statusMessages} />
+                {error && <ErrorBox error={error} />}
             </div>
 
-            {tools && tools.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                    {tools.map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => setSelectedTool(t)}
-                            className={`text-xs px-3 py-1 rounded-full border ${selectedTool === t ? 'bg-primary text-white' : 'bg-muted'}`}
-                        >
-                            {t}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            <div className="flex gap-2">
-                <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={placeholder ?? 'Enter input'} className="flex-1 bg-muted/70 border border-border rounded-xl px-4 py-2.5 text-sm" disabled={loading} />
-                <button onClick={run} disabled={loading} className="px-4 py-2 rounded-lg bg-primary text-white disabled:opacity-50">Run</button>
-                <button onClick={reset} className="px-3 py-2 rounded-lg border" disabled={loading}>Clear</button>
-            </div>
-
-            <StatusStream loading={loading} messages={statusMessages} />
-            {error && <ErrorBox error={error} />}
-
-            {result && !loading && (
-                <div className="p-4 bg-muted/30 rounded">
-                    <pre className="text-sm whitespace-pre-wrap font-mono">{JSON.stringify(result, null, 2)}</pre>
-                </div>
-            )}
+            <MCPResultSection result={result} onClear={reset} loading={loading} />
         </div>
     )
 }
 
-export const AGENTS = [
-    { id: 'youtube', title: 'YouTube', description: 'Extract transcripts & metadata from YouTube videos' },
-    { id: 'perplexity', title: 'Perplexity', description: 'Web-grounded Q&A and research' },
-    { id: 'airbnb', title: 'Airbnb', description: 'Search listings and fetch listing details' },
-    { id: 'hackernews', title: 'Hacker News', description: 'Search and browse Hacker News stories' },
-    { id: 'paper-search', title: 'Paper Search', description: 'Search and read academic papers' },
-    { id: 'wikipedia', title: 'Wikipedia', description: 'Search and summarize Wikipedia articles' },
-    { id: 'imagegen', title: 'ImageGen', description: 'Generate images from prompts' },
-    
+export const AGENTS: { id: string; title: string; description: string; icon: string }[] = [
+    { id: 'youtube', title: 'YouTube', description: 'Extract transcripts & metadata from YouTube videos', icon: '\u{1F3AC}' },
+    { id: 'perplexity', title: 'Perplexity', description: 'Web-grounded Q&A and research', icon: '\u{1F50D}' },
+    { id: 'airbnb', title: 'Airbnb', description: 'Search listings and fetch listing details', icon: '\u{1F3E0}' },
+    { id: 'hackernews', title: 'Hacker News', description: 'Search and browse Hacker News stories', icon: '\u{1F4CB}' },
+    { id: 'paper-search', title: 'Paper Search', description: 'Search and read academic papers', icon: '\u{1F4DA}' },
+    { id: 'wikipedia', title: 'Wikipedia', description: 'Search and summarize Wikipedia articles', icon: '\u{1F4D6}' },
+    { id: 'imagegen', title: 'ImageGen', description: 'Generate images from prompts', icon: '\u{1F3A8}' },
 ]
 
 export const AgentPanels: Record<string, React.FC<Record<string, unknown>>> = {

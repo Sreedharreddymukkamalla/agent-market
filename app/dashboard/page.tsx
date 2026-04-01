@@ -42,7 +42,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Spinner size="lg" color="accent" />
+        <Spinner size="lg" color="current" />
         <p className="text-default-500 animate-pulse">Loading your dashboard...</p>
       </div>
     );
@@ -56,7 +56,7 @@ export default function DashboardPage() {
       </div>
 
       {agents.length === 0 ? (
-        <section className="bg-primary/5 rounded-3xl p-12 border border-primary/10 flex flex-col items-center text-center gap-6 mt-4">
+        <section className="bg-surface-secondary rounded-2xl p-12 border border-divider flex flex-col items-center text-center gap-6 mt-4">
           <div className="flex flex-col gap-2">
             <h2 className="text-2xl font-bold text-default-900">No active agents yet</h2>
             <p className="max-w-md text-default-500 text-lg">
@@ -64,11 +64,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <Link href="/dashboard/marketplace">
-            <Button 
-              variant="primary" 
-              size="lg" 
-              className="px-12 font-bold shadow-lg shadow-primary/30 rounded-full"
-            >
+            <Button variant="primary" size="lg" className="px-12 font-semibold rounded-xl">
               Explore Agent MarketPlace
             </Button>
           </Link>
@@ -76,7 +72,10 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
           {agents.map((agent) => (
-            <Card key={agent.id} className="bg-background/60 backdrop-blur-md border border-divider p-6 shadow-sm hover:shadow-md transition-shadow">
+            <Card
+              key={agent.id}
+              className="bg-surface border border-divider p-6 transition-colors hover:bg-surface-secondary"
+            >
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-default-900">{agent.name}</h2>
                 <Chip
@@ -93,7 +92,7 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-4 mb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-default-500">Resource Usage</span>
-                  <span className="text-lg font-bold text-primary">Normal</span>
+                  <span className="text-lg font-bold text-foreground">Normal</span>
                 </div>
                 <div className="text-xs text-default-400">
                   ID: {agent.id.substring(0, 8)}...
@@ -114,13 +113,13 @@ export default function DashboardPage() {
       )}
       
       {agents.length > 0 && (
-        <section className="bg-primary/5 rounded-3xl p-8 border border-primary/10 flex flex-col items-center text-center gap-4 mt-8">
+        <section className="bg-surface-secondary rounded-2xl p-8 border border-divider flex flex-col items-center text-center gap-4 mt-8">
           <h2 className="text-2xl font-bold text-default-900">Scale Your Operations</h2>
             <p className="max-w-md text-default-500">
             Access specialized AI templates in our Agent MarketPlace to automate your repetitive workflows today.
           </p>
           <Link href="/dashboard/marketplace">
-            <Button variant="primary" size="lg" className="px-12 font-bold shadow-lg shadow-primary/30 rounded-full">
+            <Button variant="primary" size="lg" className="px-12 font-semibold rounded-xl">
               Agent MarketPlace
             </Button>
           </Link>

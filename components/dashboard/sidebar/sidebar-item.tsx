@@ -11,30 +11,57 @@ interface Props {
 }
 
 export const SidebarItem = ({ icon, title, isActive, href = "" }: Props) => {
-  const { setCollapsed } = useSidebarContext();
+  const { closeSidebar, sidebarOpen, isMdUp } = useSidebarContext();
+  const compact = isMdUp && !sidebarOpen;
 
   const handleClick = () => {
-    if (window.innerWidth < 768) {
-      setCollapsed();
+    if (!isMdUp) {
+      closeSidebar();
     }
   };
-  
+
   return (
     <NextLink
       href={href}
-      className="text-default-900 active:bg-none max-w-full no-underline"
+      title={compact ? title : undefined}
+      className={clsx(
+        "text-default-900 no-underline active:bg-none",
+        compact ? "flex w-full justify-center px-0.5" : "max-w-full",
+      )}
     >
       <div
         className={clsx(
           isActive
-            ? "bg-primary/10 text-primary"
-            : "hover:bg-default-100 text-default-500",
-          "flex gap-2 w-full min-h-[44px] h-full items-center px-3.5 rounded-xl cursor-pointer transition-all duration-150 active:scale-[0.98]"
+            ? "bg-[var(--sidebar-item-active)] text-[var(--sidebar-fg-active)]"
+            : "text-default-600 hover:bg-[var(--sidebar-item-hover)]",
+          compact
+            ? "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors duration-150"
+            : "flex min-h-11 w-full cursor-pointer items-center gap-3.5 rounded-md px-2.5 py-2.5 transition-colors duration-150",
         )}
         onClick={handleClick}
       >
-        {icon}
-        <span className={clsx(isActive ? "text-primary" : "text-default-900", "font-medium")}>{title}</span>
+        <span
+          className={clsx(
+            "flex shrink-0 items-center justify-center [&_svg]:size-6",
+            isActive
+              ? "text-[var(--sidebar-fg-active)]"
+              : "text-default-500 [&_path]:opacity-95",
+          )}
+        >
+          {icon}
+        </span>
+        {!compact && (
+          <span
+            className={clsx(
+              isActive
+                ? "text-[var(--sidebar-fg-active)]"
+                : "text-default-900",
+              "font-medium",
+            )}
+          >
+            {title}
+          </span>
+        )}
       </div>
     </NextLink>
   );

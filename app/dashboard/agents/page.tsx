@@ -133,7 +133,7 @@ export default function AgentsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Spinner size="lg" color="accent" />
+        <Spinner size="lg" color="current" />
         <p className="text-default-500 animate-pulse">Loading your agents...</p>
       </div>
     );
@@ -153,10 +153,13 @@ export default function AgentsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 mt-4">
           {agents.map((agent) => (
-            <Card key={agent.id} className="bg-background/60 backdrop-blur-md border border-divider p-6 shadow-sm hover:border-primary/50 transition-colors">
+            <Card
+              key={agent.id}
+              className="bg-surface border border-divider p-6 transition-colors hover:bg-surface-secondary"
+            >
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                  <div className="w-12 h-12 rounded-xl bg-default flex items-center justify-center text-foreground font-bold text-xl">
                     {agent.name.charAt(0)}
                   </div>
                   <div>
