@@ -262,7 +262,7 @@ export default function AgentsPage() {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-default-900">
-                    Run Agent: {activeAgent?.name}
+                    {activeAgent?.name}
                   </span>
                   <span className="text-[10px] text-default-400 font-mono">
                     SID: {currentSessionId}

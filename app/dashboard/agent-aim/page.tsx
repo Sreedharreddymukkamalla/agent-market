@@ -8,8 +8,10 @@ import {
   Modal,
   Spinner,
   Tooltip,
+  Header,
   useOverlayState,
 } from "@heroui/react";
+import { createClient } from "@/utils/supabase/client";
 import clsx from "clsx";
 
 type Role = "user" | "assistant";
@@ -76,6 +78,20 @@ function formatSessionTime(ts: number): string {
 
 function extractSseDelta(line: string): string | null {
   const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // Handle Vercel AI SDK Data Stream protocol (prefix:value)
+  // 0: "text content"
+  if (trimmed.startsWith("0:\"") && trimmed.endsWith("\"")) {
+    try {
+      const content = JSON.parse(trimmed.slice(2));
+      return typeof content === "string" ? content : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Handle legacy/OpenAI SSE format
   if (!trimmed.startsWith("data:")) return null;
   const payload = trimmed.slice(5).trim();
   if (payload === "[DONE]") return null;
@@ -486,6 +502,40 @@ export default function AgentAimPage() {
   const [activeId, setActiveId] = useState(() => initialIdRef.current!);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [availableMcps, setAvailableMcps] = useState<any[]>([]);
+  const [selectedMcpIds, setSelectedMcpIds] = useState<Set<string>>(new Set());
+  const [mcpSearchQuery, setMcpSearchQuery] = useState("");
+
+  console.log("AgentAimPage State - availableMcps:", availableMcps.length, "selectedMcpIds:", selectedMcpIds.size);
+
+  useEffect(() => {
+    async function fetchMcps() {
+      console.log("Fetching MCPs from Supabase...");
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("adk_mcps")
+        .select("id, name, url");
+      
+      if (error) {
+        console.error("Error fetching MCPs:", error);
+      } else {
+        console.log("Successfully fetched MCPs:", data);
+        setAvailableMcps(data || []);
+      }
+    }
+    void fetchMcps();
+  }, []);
+
+  const filteredMcps = useMemo(() => {
+    if (!mcpSearchQuery) return availableMcps;
+    return availableMcps.filter((mcp) =>
+      mcp.name.toLowerCase().includes(mcpSearchQuery.toLowerCase()),
+    );
+  }, [availableMcps, mcpSearchQuery]);
+
+  const selectedMcps = useMemo(() => {
+    return availableMcps.filter((mcp) => selectedMcpIds.has(mcp.id));
+  }, [availableMcps, selectedMcpIds]);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -856,7 +906,12 @@ export default function AgentAimPage() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           signal: controller.signal,
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({
+            messages: apiMessages,
+            mcpEndpoints: availableMcps
+              .filter((m) => selectedMcpIds.has(m.id))
+              .map((m) => m.url),
+          }),
         });
 
         if (!res.ok) {
@@ -1157,19 +1212,78 @@ export default function AgentAimPage() {
                   </span>
                 </span>
               </Dropdown.Item>
-              <Dropdown.Item
-                key="agents"
-                className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
-                textValue="Agents"
-                onPress={() => router.push("/agent-market")}
-              >
-                <span className="flex items-center gap-3">
-                  <IconAgentsMenu className="shrink-0 text-default-600 dark:text-default-400" />
-                  <span className="text-sm font-medium text-default-900">
-                    Agents
-                  </span>
-                </span>
-              </Dropdown.Item>
+              <Dropdown.Section>
+                <Header className="px-2 py-1.5 border-b border-divider mb-1">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-default-400">Add MCPs</span>
+                    <input
+                      type="text"
+                      placeholder="Search MCPs..."
+                      className="w-full rounded-lg border border-divider bg-default-100 px-2 py-1 text-sm outline-none focus:border-primary"
+                      value={mcpSearchQuery}
+                      onChange={(e) => setMcpSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </Header>
+                {filteredMcps.length > 0 ? (
+                  filteredMcps.map((mcp) => (
+                    <Dropdown.Item
+                      key={mcp.id}
+                      className="cursor-pointer rounded-xl py-2 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
+                      textValue={mcp.name}
+                      onPress={() => setSelectedMcpIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(mcp.id)) next.delete(mcp.id);
+                        else next.add(mcp.id);
+                        return next;
+                      })}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={clsx(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          selectedMcpIds.has(mcp.id) ? "bg-primary" : "bg-transparent border border-default-400"
+                        )} />
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-sm font-medium">{mcp.name}</span>
+                          <span className="text-xs text-default-400 truncate max-w-[150px]">{mcp.url}</span>
+                        </div>
+                      </div>
+                    </Dropdown.Item>
+                  ))
+                ) : (
+                  <Dropdown.Item key="empty" className="pointer-events-none opacity-50" textValue="No MCPs found">
+                    <span className="text-xs text-default-400">No MCPs found</span>
+                  </Dropdown.Item>
+                )}
+              </Dropdown.Section>
+              {selectedMcps.length > 0 && (
+                <Dropdown.Section>
+                  <Header className="px-2 py-1 text-xs font-semibold text-default-400 border-t border-divider mt-1 pt-2">
+                    Active Tools ({selectedMcps.length})
+                  </Header>
+                  <div className="flex flex-wrap gap-1 px-2 py-1">
+                    {selectedMcps.map(mcp => (
+                      <div key={mcp.id} className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium">
+                        {mcp.name}
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedMcpIds(prev => {
+                              const next = new Set(prev);
+                              next.delete(mcp.id);
+                              return next;
+                            });
+                          }}
+                          className="hover:text-primary-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </Dropdown.Section>
+              )}
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>
