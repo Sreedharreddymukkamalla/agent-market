@@ -19,8 +19,9 @@ import { SidebarItem } from "./sidebar-item";
 import { SidebarMenu } from "./sidebar-menu";
 import { useSidebarContext } from "../layout-context";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import NextLink from "next/link";
-import { BrandMark } from "../brand-mark";
+import { MoonFilledIcon, SunFilledIcon } from "@/components/icons";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { SidebarCollapse } from "./sidebar-collapse";
@@ -110,11 +111,18 @@ function getInitials(name: string, email: string): string {
 export const SidebarWrapper = () => {
   const pathname = usePathname();
   const router = useRouter();
+  const { setTheme, resolvedTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
   const { sidebarOpen, closeSidebar, isMdUp } = useSidebarContext();
   const isRail = isMdUp && !sidebarOpen;
   const mobileDrawerOpen = !isMdUp && sidebarOpen;
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
+  const isLight = resolvedTheme === "light";
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -158,13 +166,18 @@ export const SidebarWrapper = () => {
         onClick={closeSidebar}
         aria-hidden={!mobileDrawerOpen}
       />
-      <div className={Sidebar({ expanded: sidebarOpen })}>
+      <div
+        className={clsx(
+          Sidebar({ expanded: sidebarOpen }),
+          isMdUp && isRail && "group/sidebar-rail",
+        )}
+      >
         <div
           className={clsx(
             "grid min-h-0 shrink-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-[var(--sidebar-bg)]",
             isMdUp && "border-r border-divider",
             !isMdUp &&
-            "fixed left-0 top-16 z-[203] h-[calc(100vh-4rem)] w-64 rounded-r-[2rem] border-r border-[var(--sidebar-border)] transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+              "fixed left-0 top-12 z-[203] h-[calc(100dvh-3rem)] w-64 rounded-r-[2rem] border-r border-[var(--sidebar-border)] transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
             !isMdUp &&
             (sidebarOpen
               ? "translate-x-0 px-2 pb-2 pt-3"
@@ -179,17 +192,23 @@ export const SidebarWrapper = () => {
             {!isRail && (
               <NextLink
                 href="/"
-                className="flex items-center gap-2.5 px-2 py-2 transition-opacity hover:opacity-80"
+                className="flex min-w-0 flex-1 items-center gap-2 py-2 pl-1 pr-0 transition-opacity hover:opacity-80"
               >
-                <div className="shrink-0 rounded-md bg-[var(--logo-mark-bg)] p-1.5 shadow-sm">
-                  <BrandMark size={22} />
-                </div>
-                <span className="truncate text-[17.5px] font-bold tracking-tight text-foreground">
-                  Agent Market
+                <img
+                  src="/logo.png"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="shrink-0 rounded-md object-contain shadow-sm ring-1 ring-black/[0.06] dark:ring-white/10"
+                />
+                <span className="min-w-0 truncate text-[17.5px] font-bold tracking-tight text-foreground">
+                  Aimploy
                 </span>
               </NextLink>
             )}
-            <BurguerButton variant="rail" />
+            <div className="flex shrink-0 items-center justify-center pr-0.5">
+              <BurguerButton variant="rail" />
+            </div>
           </div>
 
           <div className={Sidebar.Body({ rail: isRail })}>
@@ -199,7 +218,7 @@ export const SidebarWrapper = () => {
               isActive={pathname === "/dashboard/agent-aim"}
               href="/dashboard/agent-aim"
             />
-            <SidebarMenu title="Explore" hideLabel={isRail}>
+            <SidebarMenu hideLabel>
               <SidebarItem
                 isActive={pathname === "/dashboard/agents"}
                 title="My Agents"
@@ -349,6 +368,49 @@ export const SidebarWrapper = () => {
                       <HelpCircleIcon className="shrink-0 text-default-600" />
                       <span className="text-sm font-medium text-default-900">
                         Help &amp; Feedback
+                      </span>
+                    </span>
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    key="theme"
+                    className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
+                    textValue={
+                      themeMounted
+                        ? isLight
+                          ? "Switch to dark mode"
+                          : "Switch to light mode"
+                        : "Appearance"
+                    }
+                    onPress={() => {
+                      setTheme(isLight ? "dark" : "light");
+                      closeMobileSidebar();
+                    }}
+                  >
+                    <span className="flex items-center gap-3">
+                      {themeMounted ? (
+                        isLight ? (
+                          <MoonFilledIcon
+                            size={18}
+                            className="shrink-0 text-default-600"
+                          />
+                        ) : (
+                          <SunFilledIcon
+                            size={18}
+                            className="shrink-0 text-default-600"
+                          />
+                        )
+                      ) : (
+                        <span
+                          className="size-[18px] shrink-0"
+                          aria-hidden
+                        />
+                      )}
+                      <span className="text-sm font-medium text-default-900">
+                        {themeMounted
+                          ? isLight
+                            ? "Dark mode"
+                            : "Light mode"
+                          : "Appearance"}
                       </span>
                     </span>
                   </Dropdown.Item>

@@ -15,7 +15,7 @@ export const SidebarRail = tv({
 });
 
 export const Overlay = tv({
-  base: "fixed left-0 right-0 top-16 bottom-0 z-[201] bg-[var(--scrim)] transition-opacity duration-200 ease-out md:hidden",
+  base: "fixed left-0 right-0 top-12 bottom-0 z-[201] bg-[var(--scrim)] transition-opacity duration-200 ease-out md:hidden",
   variants: {
     visible: {
       true: "pointer-events-auto opacity-100",
@@ -28,11 +28,11 @@ export const Overlay = tv({
 });
 
 export const Header = tv({
-  base: "flex w-full shrink-0 gap-2 px-1 pt-0.5",
+  base: "flex w-full min-w-0 shrink-0 gap-1 px-0.5 pt-0.5",
   variants: {
     rail: {
       true: "flex-col items-center justify-center pb-2 pt-1",
-      false: "mb-3 flex-row items-center justify-between pb-1",
+      false: "mb-3 flex-row items-center justify-between gap-1 pb-1",
     },
   },
   defaultVariants: {
@@ -42,7 +42,7 @@ export const Header = tv({
 
 /** Middle scroll region (grid row minmax(0,1fr)); not flex-1 — parent grid assigns height. */
 export const Body = tv({
-  base: "flex min-h-0 flex-col justify-start gap-0.5 overflow-y-auto overflow-x-hidden overscroll-contain px-1 pt-1",
+  base: "flex min-h-0 flex-col justify-start gap-1 overflow-y-auto overflow-x-hidden overscroll-contain px-1 pt-1",
   variants: {
     rail: {
       true: "w-full items-stretch px-0 pt-1",

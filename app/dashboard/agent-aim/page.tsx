@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Dropdown,
@@ -10,6 +17,7 @@ import {
   useOverlayState,
 } from "@heroui/react";
 import clsx from "clsx";
+import { AgentsIcon } from "@/components/dashboard/icons";
 import {
   IconHistory,
   IconPlus,
@@ -39,7 +47,7 @@ const STORAGE_KEY = "agent-aim-chat-sessions-v1";
 const AIM_FRESH_LOGIN_QP = "aimFresh";
 
 type WebSpeechRecognitionEvent = {
-  results: { length: number;[i: number]: { 0: { transcript: string } } };
+  results: { length: number; [i: number]: { 0: { transcript: string } } };
 };
 type WebSpeechRecognition = {
   lang: string;
@@ -53,7 +61,9 @@ type WebSpeechRecognition = {
   onend: (() => void) | null;
 };
 
-function getSpeechRecognitionConstructor(): (new () => WebSpeechRecognition) | null {
+function getSpeechRecognitionConstructor():
+  | (new () => WebSpeechRecognition)
+  | null {
   if (typeof window === "undefined") return null;
   const w = window as Window & {
     SpeechRecognition?: new () => WebSpeechRecognition;
@@ -148,7 +158,10 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
   }, [stream]);
 
   return (
-    <div className="flex min-h-[2.75rem] min-w-0 flex-1 items-center px-1" aria-hidden>
+    <div
+      className="flex min-h-[2.75rem] min-w-0 flex-1 items-center px-1"
+      aria-hidden
+    >
       <div className="flex h-10 min-w-0 flex-1 items-end justify-center gap-[2px] sm:gap-0.5">
         {heights.map((h, i) => (
           <div
@@ -163,8 +176,8 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
 }
 
 async function shareChatSession(s: ChatSession): Promise<void> {
-  const lines = s.messages.map((m) =>
-    `${m.role === "user" ? "You" : "Agent Aim"}: ${m.content}`,
+  const lines = s.messages.map(
+    (m) => `${m.role === "user" ? "You" : "Agent Aim"}: ${m.content}`,
   );
   const text = lines.filter(Boolean).join("\n\n") || s.title;
   try {
@@ -192,6 +205,7 @@ function ThinkingDots() {
 }
 
 export default function AgentAimPage() {
+  const router = useRouter();
   const initialIdRef = useRef<string | null>(null);
   if (initialIdRef.current === null) {
     initialIdRef.current = crypto.randomUUID();
@@ -208,12 +222,16 @@ export default function AgentAimPage() {
   const [activeId, setActiveId] = useState(() => initialIdRef.current!);
   const [input, setInput] = useState("");
   // "idle" | "connecting" | "streaming"
-  const [loadingState, setLoadingState] = useState<"idle" | "connecting" | "streaming">("idle");
+  const [loadingState, setLoadingState] = useState<
+    "idle" | "connecting" | "streaming"
+  >("idle");
   const loading = loadingState !== "idle";
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(
+    null,
+  );
   const [deleteChatLabel, setDeleteChatLabel] = useState("");
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState("");
@@ -234,11 +252,14 @@ export default function AgentAimPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const inlineEditTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     return () => {
-      if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current);
+      if (copyFeedbackTimeoutRef.current)
+        clearTimeout(copyFeedbackTimeoutRef.current);
     };
   }, []);
 
@@ -248,15 +269,26 @@ export default function AgentAimPage() {
   const [voiceStream, setVoiceStream] = useState<MediaStream | null>(null);
 
   const tearDownVoiceMedia = useCallback(() => {
-    setVoiceStream((s) => { s?.getTracks().forEach((t) => t.stop()); return null; });
+    setVoiceStream((s) => {
+      s?.getTracks().forEach((t) => t.stop());
+      return null;
+    });
     setListening(false);
   }, []);
 
   const stopVoiceRecognition = useCallback(() => {
     const rec = recognitionRef.current;
     recognitionRef.current = null;
-    try { rec?.stop(); } catch { /* */ }
-    try { rec?.abort?.(); } catch { /* */ }
+    try {
+      rec?.stop();
+    } catch {
+      /* */
+    }
+    try {
+      rec?.abort?.();
+    } catch {
+      /* */
+    }
     tearDownVoiceMedia();
   }, [tearDownVoiceMedia]);
 
@@ -264,23 +296,50 @@ export default function AgentAimPage() {
     setInput(voiceInputPrefixRef.current);
     const rec = recognitionRef.current;
     recognitionRef.current = null;
-    try { rec?.abort?.(); } catch { try { rec?.stop(); } catch { /* */ } }
+    try {
+      rec?.abort?.();
+    } catch {
+      try {
+        rec?.stop();
+      } catch {
+        /* */
+      }
+    }
     tearDownVoiceMedia();
   }, [tearDownVoiceMedia]);
 
   const confirmVoiceInput = useCallback(() => {
     const rec = recognitionRef.current;
-    if (!rec) { tearDownVoiceMedia(); return; }
-    try { rec.stop(); } catch { recognitionRef.current = null; tearDownVoiceMedia(); }
+    if (!rec) {
+      tearDownVoiceMedia();
+      return;
+    }
+    try {
+      rec.stop();
+    } catch {
+      recognitionRef.current = null;
+      tearDownVoiceMedia();
+    }
   }, [tearDownVoiceMedia]);
 
   useEffect(() => {
     return () => {
       const rec = recognitionRef.current;
       recognitionRef.current = null;
-      try { rec?.abort?.(); } catch { /* */ }
-      try { rec?.stop(); } catch { /* */ }
-      setVoiceStream((s) => { s?.getTracks().forEach((t) => t.stop()); return null; });
+      try {
+        rec?.abort?.();
+      } catch {
+        /* */
+      }
+      try {
+        rec?.stop();
+      } catch {
+        /* */
+      }
+      setVoiceStream((s) => {
+        s?.getTracks().forEach((t) => t.stop());
+        return null;
+      });
     };
   }, []);
 
@@ -295,22 +354,36 @@ export default function AgentAimPage() {
           params.delete(AIM_FRESH_LOGIN_QP);
           const q = params.toString();
           window.history.replaceState(
-            null, "",
+            null,
+            "",
             `${window.location.pathname}${q ? `?${q}` : ""}${window.location.hash}`,
           );
         }
       }
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) { setHydrated(true); return; }
-      const data = JSON.parse(raw) as { sessions?: ChatSession[]; activeId?: string };
+      if (!raw) {
+        setHydrated(true);
+        return;
+      }
+      const data = JSON.parse(raw) as {
+        sessions?: ChatSession[];
+        activeId?: string;
+      };
       if (
         Array.isArray(data.sessions) &&
         data.sessions.every(
-          (s) => s && typeof s.id === "string" && Array.isArray(s.messages) && typeof s.updatedAt === "number",
+          (s) =>
+            s &&
+            typeof s.id === "string" &&
+            Array.isArray(s.messages) &&
+            typeof s.updatedAt === "number",
         )
       ) {
         const loaded = data.sessions.filter((s) => s.messages.length > 0);
-        if (loaded.length === 0) { setHydrated(true); return; }
+        if (loaded.length === 0) {
+          setHydrated(true);
+          return;
+        }
         const preferred =
           data.activeId && loaded.some((s) => s.id === data.activeId)
             ? data.activeId
@@ -318,11 +391,18 @@ export default function AgentAimPage() {
         const draftId = crypto.randomUUID();
         setSessions([
           ...loaded,
-          { id: draftId, title: "New chat", messages: [], updatedAt: Date.now() },
+          {
+            id: draftId,
+            title: "New chat",
+            messages: [],
+            updatedAt: Date.now(),
+          },
         ]);
         setActiveId(startFreshAfterAuth ? draftId : preferred);
       }
-    } catch { /* keep default */ }
+    } catch {
+      /* keep default */
+    }
     setHydrated(true);
   }, []);
 
@@ -332,12 +412,20 @@ export default function AgentAimPage() {
     try {
       const persisted = sessions.filter((s) => s.messages.length > 0);
       const activeSession = sessions.find((s) => s.id === activeId);
-      const persistedActive = activeSession && activeSession.messages.length > 0 ? activeId : undefined;
+      const persistedActive =
+        activeSession && activeSession.messages.length > 0
+          ? activeId
+          : undefined;
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ sessions: persisted, ...(persistedActive ? { activeId: persistedActive } : {}) }),
+        JSON.stringify({
+          sessions: persisted,
+          ...(persistedActive ? { activeId: persistedActive } : {}),
+        }),
       );
-    } catch { /* quota / private mode */ }
+    } catch {
+      /* quota / private mode */
+    }
   }, [sessions, activeId, hydrated]);
 
   const messages = useMemo(
@@ -350,8 +438,14 @@ export default function AgentAimPage() {
       setSessions((prev) =>
         prev.map((s) => {
           if (s.id !== activeId) return s;
-          const next = typeof updater === "function" ? updater(s.messages) : updater;
-          return { ...s, messages: next, title: sessionTitleFromMessages(next), updatedAt: Date.now() };
+          const next =
+            typeof updater === "function" ? updater(s.messages) : updater;
+          return {
+            ...s,
+            messages: next,
+            title: sessionTitleFromMessages(next),
+            updatedAt: Date.now(),
+          };
         }),
       );
     },
@@ -368,20 +462,29 @@ export default function AgentAimPage() {
     setLoadingState("idle");
   }, []);
 
-  const copyMessageText = useCallback(async (messageId: string, text: string) => {
-    if (!text) return;
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        if (copyFeedbackTimeoutRef.current) clearTimeout(copyFeedbackTimeoutRef.current);
-        setCopiedMessageId(messageId);
-        copyFeedbackTimeoutRef.current = setTimeout(() => {
-          setCopiedMessageId((id) => (id === messageId ? null : id));
-          copyFeedbackTimeoutRef.current = null;
-        }, 2000);
+  const copyMessageText = useCallback(
+    async (messageId: string, text: string) => {
+      if (!text) return;
+      try {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard?.writeText
+        ) {
+          await navigator.clipboard.writeText(text);
+          if (copyFeedbackTimeoutRef.current)
+            clearTimeout(copyFeedbackTimeoutRef.current);
+          setCopiedMessageId(messageId);
+          copyFeedbackTimeoutRef.current = setTimeout(() => {
+            setCopiedMessageId((id) => (id === messageId ? null : id));
+            copyFeedbackTimeoutRef.current = null;
+          }, 2000);
+        }
+      } catch {
+        /* ignore */
       }
-    } catch { /* ignore */ }
-  }, []);
+    },
+    [],
+  );
 
   const cancelInlineEdit = useCallback(() => {
     setEditingMessageId(null);
@@ -392,33 +495,48 @@ export default function AgentAimPage() {
     if (loading || editingMessageId || recognitionRef.current) return;
     const Ctor = getSpeechRecognitionConstructor();
     if (!Ctor) {
-      setError("Voice input needs a supported browser (e.g. Chrome or Edge on desktop).");
+      setError(
+        "Voice input needs a supported browser (e.g. Chrome or Edge on desktop).",
+      );
       return;
     }
     setError(null);
     voiceInputPrefixRef.current = input;
     let stream: MediaStream | null = null;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { /* fallback */ }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      /* fallback */
+    }
     setVoiceStream(stream);
 
     const rec = new Ctor();
-    rec.lang = (typeof navigator !== "undefined" && navigator.language) || "en-US";
+    rec.lang =
+      (typeof navigator !== "undefined" && navigator.language) || "en-US";
     rec.interimResults = true;
     rec.continuous = false;
     rec.onresult = (event: WebSpeechRecognitionEvent) => {
       let spoken = "";
-      for (let i = 0; i < event.results.length; i++) spoken += event.results[i]?.[0]?.transcript ?? "";
+      for (let i = 0; i < event.results.length; i++)
+        spoken += event.results[i]?.[0]?.transcript ?? "";
       const prefix = voiceInputPrefixRef.current;
-      const combined = prefix && spoken && !/\s$/.test(prefix) && !/^\s/.test(spoken)
-        ? `${prefix} ${spoken}` : `${prefix}${spoken}`;
+      const combined =
+        prefix && spoken && !/\s$/.test(prefix) && !/^\s/.test(spoken)
+          ? `${prefix} ${spoken}`
+          : `${prefix}${spoken}`;
       setInput(combined);
     };
-    const onSessionEnd = () => { recognitionRef.current = null; tearDownVoiceMedia(); };
+    const onSessionEnd = () => {
+      recognitionRef.current = null;
+      tearDownVoiceMedia();
+    };
     rec.onerror = onSessionEnd;
     rec.onend = onSessionEnd;
     recognitionRef.current = rec;
     setListening(true);
-    try { rec.start(); } catch {
+    try {
+      rec.start();
+    } catch {
       recognitionRef.current = null;
       tearDownVoiceMedia();
       setError("Could not start microphone. Check permissions.");
@@ -460,7 +578,10 @@ export default function AgentAimPage() {
     async (historyThroughUser: Msg[]) => {
       setError(null);
       const assistantId = crypto.randomUUID();
-      const apiMessages = historyThroughUser.map((m) => ({ role: m.role, content: m.content }));
+      const apiMessages = historyThroughUser.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       // Optimistically add the empty assistant bubble; show "connecting" state
       updateActiveMessages([
@@ -483,13 +604,17 @@ export default function AgentAimPage() {
 
         if (!res.ok) {
           const errText = await res.text();
-          updateActiveMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          updateActiveMessages((prev) =>
+            prev.filter((m) => m.id !== assistantId),
+          );
           setError(errText || `Request failed (${res.status})`);
           return;
         }
 
         if (!res.body) {
-          updateActiveMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          updateActiveMessages((prev) =>
+            prev.filter((m) => m.id !== assistantId),
+          );
           setError("No response stream");
           return;
         }
@@ -514,7 +639,9 @@ export default function AgentAimPage() {
         }
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
-        updateActiveMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        updateActiveMessages((prev) =>
+          prev.filter((m) => m.id !== assistantId),
+        );
         setError(e instanceof Error ? e.message : "Request failed");
       } finally {
         setLoadingState("idle");
@@ -533,10 +660,22 @@ export default function AgentAimPage() {
     stopVoiceRecognition();
     setError(null);
     const before = messages.slice(0, idx);
-    const userMsg: Msg = { id: crypto.randomUUID(), role: "user", content: text };
+    const userMsg: Msg = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+    };
     cancelInlineEdit();
     await runStreamChat([...before, userMsg]);
-  }, [editingDraft, editingMessageId, messages, stop, stopVoiceRecognition, cancelInlineEdit, runStreamChat]);
+  }, [
+    editingDraft,
+    editingMessageId,
+    messages,
+    stop,
+    stopVoiceRecognition,
+    cancelInlineEdit,
+    runStreamChat,
+  ]);
 
   const send = useCallback(async () => {
     if (editingMessageId) return;
@@ -544,9 +683,20 @@ export default function AgentAimPage() {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
-    const userMsg: Msg = { id: crypto.randomUUID(), role: "user", content: text };
+    const userMsg: Msg = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+    };
     await runStreamChat([...messages, userMsg]);
-  }, [editingMessageId, input, loading, messages, runStreamChat, stopVoiceRecognition]);
+  }, [
+    editingMessageId,
+    input,
+    loading,
+    messages,
+    runStreamChat,
+    stopVoiceRecognition,
+  ]);
 
   const newChat = useCallback(() => {
     stop();
@@ -565,14 +715,20 @@ export default function AgentAimPage() {
       }
       const id = crypto.randomUUID();
       nextActiveId = id;
-      return [...nonEmpty, { id, title: "New chat", messages: [], updatedAt: Date.now() }];
+      return [
+        ...nonEmpty,
+        { id, title: "New chat", messages: [], updatedAt: Date.now() },
+      ];
     });
     if (nextActiveId) setActiveId(nextActiveId);
   }, [stop, stopVoiceRecognition, activeId]);
 
   const openHistory = useCallback(() => setHistoryOpen(true), []);
   const closeHistory = useCallback(() => setHistoryOpen(false), []);
-  const newChatFromHistory = useCallback(() => { newChat(); closeHistory(); }, [newChat, closeHistory]);
+  const newChatFromHistory = useCallback(() => {
+    newChat();
+    closeHistory();
+  }, [newChat, closeHistory]);
 
   const selectSession = useCallback(
     (id: string) => {
@@ -594,13 +750,18 @@ export default function AgentAimPage() {
   );
 
   const historySessions = useMemo(
-    () => sessions.filter((s) => s.messages.length > 0).sort((a, b) => b.updatedAt - a.updatedAt),
+    () =>
+      sessions
+        .filter((s) => s.messages.length > 0)
+        .sort((a, b) => b.updatedAt - a.updatedAt),
     [sessions],
   );
 
   useEffect(() => {
     if (!historyOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !deleteDialog.isOpen) closeHistory(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !deleteDialog.isOpen) closeHistory();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [historyOpen, closeHistory, deleteDialog.isOpen]);
@@ -621,27 +782,40 @@ export default function AgentAimPage() {
     deleteDialog.close();
     setSessions((prev) => {
       const next = prev.filter((x) => x.id !== deletedId);
-      const fallback = next.length === 0
-        ? [{ id: crypto.randomUUID(), title: "New chat", messages: [], updatedAt: Date.now() }]
-        : next;
+      const fallback =
+        next.length === 0
+          ? [
+              {
+                id: crypto.randomUUID(),
+                title: "New chat",
+                messages: [],
+                updatedAt: Date.now(),
+              },
+            ]
+          : next;
       setActiveId((aid) => (aid === deletedId ? fallback[0].id : aid));
       return fallback;
     });
   }, [sessionToDelete, deleteDialog]);
 
   const toolbarBtn =
-    "flex h-10 w-10 items-center justify-center rounded-full text-foreground/75 transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground dark:hover:bg-white/10";
+    "flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-foreground/75 transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground dark:hover:bg-white/10";
   const voiceChromeBtn =
     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-white/10";
 
+  const composerBarBtn =
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/75 outline-none transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-white/10";
+
   const composerSection = (
-    <div className="mx-auto w-full max-w-2xl">
+    <div className="mx-auto w-full max-w-3xl">
       {listening ? (
         <span id="agent-aim-voice-status" className="sr-only">
           Recording — speak, then press done or cancel.
         </span>
       ) : (
-        <label className="sr-only" htmlFor="agent-aim-input">Ask anything</label>
+        <label className="sr-only" htmlFor="agent-aim-input">
+          Ask anything
+        </label>
       )}
       <input
         ref={fileInputRef}
@@ -654,58 +828,33 @@ export default function AgentAimPage() {
       />
       <div
         className={clsx(
-          "flex min-h-[3.25rem] items-center gap-1 rounded-full border px-1.5 py-1.5 pl-2",
-          listening
-            ? "border-zinc-200/90 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_4px_16px_-4px_rgba(0,0,0,0.06)] dark:border-white/12 dark:bg-zinc-900 dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)]"
-            : clsx(
-              "border-divider bg-[var(--surface)]",
-              "shadow-[0_12px_40px_-12px_rgba(0,0,0,0.14),0_4px_16px_-6px_rgba(0,0,0,0.08)]",
-              "dark:border-white/[0.08] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.06)]",
-            ),
+          "overflow-hidden rounded-2xl border border-divider bg-[var(--surface)] shadow-sm",
+          listening &&
+            "border-zinc-200/90 dark:border-white/12 dark:bg-zinc-900 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.35)]",
         )}
       >
-        <Dropdown>
-          <Dropdown.Trigger
-            className={clsx(
-              "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full outline-none transition-colors",
-              "data-[pressed=true]:opacity-90",
-              listening
-                ? "text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-white/10"
-                : "text-foreground/80 hover:bg-[var(--sidebar-item-hover)] hover:text-foreground",
-            )}
-            aria-label="Add photos, files, or agents"
-          >
-            <IconPlus className={listening ? "" : "opacity-90"} />
-          </Dropdown.Trigger>
-          <Dropdown.Popover
-            placement="top start"
-            offset={10}
-            className="rounded-2xl border border-divider bg-[var(--overlay)] p-1 shadow-[var(--overlay-shadow)]"
-          >
-            <Dropdown.Menu aria-label="Add to message" className="min-w-[13.5rem] gap-0.5 rounded-xl p-1">
-              <Dropdown.Item
-                key="files"
-                className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
-                textValue="Add photos and files"
-                onPress={() => fileInputRef.current?.click()}
-              >
-                <span className="flex items-center gap-3">
-                  <IconPhotosFiles className="shrink-0 text-default-600 dark:text-default-400" />
-                  <span className="text-sm font-medium text-default-900">Add photos &amp; files</span>
-                </span>
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown>
-
         {listening ? (
           <>
-            <VoiceWaveform stream={voiceStream} />
-            <div className="flex shrink-0 items-center gap-0 pr-0.5">
-              <button type="button" aria-label="Cancel voice input" title="Cancel" className={voiceChromeBtn} onClick={cancelVoiceInput}>
+            <div className="flex min-h-12 items-center px-3 pt-2 pb-1.5">
+              <VoiceWaveform stream={voiceStream} />
+            </div>
+            <div className="flex items-center justify-end gap-1 px-2.5 py-2">
+              <button
+                type="button"
+                aria-label="Cancel voice input"
+                title="Cancel"
+                className={voiceChromeBtn}
+                onClick={cancelVoiceInput}
+              >
                 <IconCloseRecording />
               </button>
-              <button type="button" aria-label="Done recording" title="Done" className={voiceChromeBtn} onClick={confirmVoiceInput}>
+              <button
+                type="button"
+                aria-label="Done recording"
+                title="Done"
+                className={voiceChromeBtn}
+                onClick={confirmVoiceInput}
+              >
                 <IconCheck />
               </button>
             </div>
@@ -719,53 +868,126 @@ export default function AgentAimPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && e.altKey) {
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  const { selectionStart, selectionEnd } = el;
+                  const v = el.value;
+                  const next =
+                    v.slice(0, selectionStart ?? 0) +
+                    "\n" +
+                    v.slice(selectionEnd ?? 0);
+                  setInput(next);
+                  queueMicrotask(() => {
+                    const pos = (selectionStart ?? 0) + 1;
+                    el.selectionStart = el.selectionEnd = pos;
+                  });
+                  return;
+                }
+                if (
+                  e.key === "Enter" &&
+                  !e.shiftKey &&
+                  !e.altKey &&
+                  !e.ctrlKey &&
+                  !e.metaKey
+                ) {
                   e.preventDefault();
                   void send();
                 }
               }}
               placeholder="Ask anything"
               disabled={loading || !!editingMessageId}
-              className="min-h-[2.75rem] max-h-40 flex-1 resize-none bg-transparent px-2 py-2.5 text-[15px] leading-snug text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+              className="min-h-[3rem] max-h-48 w-full resize-none bg-transparent px-3.5 pt-2 pb-1.5 text-[15px] leading-snug text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
-            <div className="flex shrink-0 items-center gap-0.5 pr-0.5">
-              {loading ? (
+            <div className="flex items-center justify-between gap-2 px-2.5 py-2">
+              <div className="flex shrink-0 items-center gap-1">
+                <Dropdown>
+                  <Dropdown.Trigger
+                    className={clsx(
+                      composerBarBtn,
+                      "data-[pressed=true]:opacity-90",
+                    )}
+                    aria-label="Add photos, files, or agents"
+                  >
+                    <IconPlus className="opacity-90" />
+                  </Dropdown.Trigger>
+                  <Dropdown.Popover
+                    placement="top start"
+                    offset={10}
+                    className="rounded-2xl border border-divider bg-[var(--overlay)] p-1 shadow-[var(--overlay-shadow)]"
+                  >
+                    <Dropdown.Menu
+                      aria-label="Add to message"
+                      className="min-w-[13.5rem] gap-0.5 rounded-xl p-1"
+                    >
+                      <Dropdown.Item
+                        key="files"
+                        className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
+                        textValue="Add photos and files"
+                        onPress={() => fileInputRef.current?.click()}
+                      >
+                        <span className="flex items-center gap-3">
+                          <IconPhotosFiles className="shrink-0 text-default-600 dark:text-default-400" />
+                          <span className="text-sm font-medium text-default-900">
+                            Add photos &amp; files
+                          </span>
+                        </span>
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        key="agents"
+                        className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
+                        textValue="Agents"
+                        onPress={() => router.push("/dashboard/agents")}
+                      >
+                        <span className="flex items-center gap-3">
+                          <AgentsIcon
+                            size={20}
+                            className="shrink-0 text-default-600 dark:text-default-400"
+                          />
+                          <span className="text-sm font-medium text-default-900">
+                            Agents
+                          </span>
+                        </span>
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown.Popover>
+                </Dropdown>
+              </div>
+              <div className="flex shrink-0 items-center justify-end gap-1">
+                {loading ? (
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground"
+                    onClick={stop}
+                  >
+                    Stop
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="rounded-full px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground"
-                  onClick={stop}
+                  className={composerBarBtn}
+                  aria-label="Voice input"
+                  disabled={loading || !!editingMessageId}
+                  title="Speak to type"
+                  onClick={() => void startVoiceInput()}
                 >
-                  Stop
+                  <IconMic />
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className={clsx(
-                  "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                  "text-foreground/80 hover:bg-[var(--sidebar-item-hover)] hover:text-foreground",
-                  "disabled:cursor-not-allowed disabled:opacity-40",
-                )}
-                aria-label="Voice input"
-                disabled={loading || !!editingMessageId}
-                title="Speak to type"
-                onClick={() => void startVoiceInput()}
-              >
-                <IconMic />
-              </button>
-              <button
-                type="button"
-                aria-label="Send message"
-                disabled={loading || !!editingMessageId || !input.trim()}
-                onClick={() => void send()}
-                className={clsx(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity",
-                  "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm",
-                  "disabled:cursor-not-allowed disabled:opacity-35",
-                  "hover:opacity-90",
-                )}
-              >
-                <IconSend />
-              </button>
+                <button
+                  type="button"
+                  aria-label="Send message"
+                  disabled={loading || !!editingMessageId || !input.trim()}
+                  onClick={() => void send()}
+                  className={clsx(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity",
+                    "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm",
+                    "disabled:cursor-not-allowed disabled:opacity-35",
+                    "hover:opacity-90",
+                  )}
+                >
+                  <IconSend />
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -779,34 +1001,45 @@ export default function AgentAimPage() {
         {/* Toolbar */}
         <div className="pointer-events-none absolute right-4 top-4 z-10 flex gap-1 sm:right-6 sm:top-5">
           <div className="pointer-events-auto flex gap-1">
-            <button type="button" className={toolbarBtn} aria-label="Chat history" onClick={openHistory}>
+            <button
+              type="button"
+              className={toolbarBtn}
+              aria-label="Chat history"
+              onClick={openHistory}
+            >
               <IconHistory />
             </button>
-            <button type="button" className={toolbarBtn} aria-label="New chat" onClick={newChat}>
+            <button
+              type="button"
+              className={toolbarBtn}
+              aria-label="New chat"
+              onClick={newChat}
+            >
               <IconPlus />
             </button>
           </div>
         </div>
 
-        {/* Messages */}
+        {/* Messages + empty-state greeting at top */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-14 sm:px-8">
           {messages.length === 0 ? (
-            <div className="flex min-h-full flex-col items-center justify-center gap-8 px-2 py-8 text-center sm:gap-10">
-              <div>
-                <h2 className="text-[1.65rem] font-semibold tracking-tight text-default-900 sm:text-3xl">
-                  Hello there!
-                </h2>
-                <p className="mt-2 max-w-md text-base text-muted-foreground sm:text-lg">
-                  Agent Aim is here to help
-                </p>
-              </div>
-              {composerSection}
+            <div className="mx-auto w-full max-w-3xl px-2 pb-6 text-center sm:pb-8">
+              <h2 className="text-[1.65rem] font-semibold tracking-tight text-default-900 sm:text-3xl">
+                Hello there!
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-base text-muted-foreground sm:text-lg">
+                Agent Aim is here to help
+              </p>
             </div>
           ) : (
             <div className="mx-auto flex max-w-3xl flex-col gap-4 pb-6 pt-2">
               {messages.map((m) => {
-                const copyable = m.role === "assistant" ? m.content.length > 0 : m.content.trim().length > 0;
-                const isEditingUser = m.role === "user" && editingMessageId === m.id;
+                const copyable =
+                  m.role === "assistant"
+                    ? m.content.length > 0
+                    : m.content.trim().length > 0;
+                const isEditingUser =
+                  m.role === "user" && editingMessageId === m.id;
                 const copied = copiedMessageId === m.id;
 
                 // The assistant bubble that is currently being filled
@@ -824,19 +1057,29 @@ export default function AgentAimPage() {
                     )}
                   >
                     {isEditingUser ? (
-                      <div className={clsx(
-                        "w-full max-w-[min(100%,42rem)] rounded-3xl border border-divider px-4 pb-3 pt-3",
-                        "bg-default-100 shadow-sm dark:bg-white/[0.06]",
-                      )}>
-                        <label className="sr-only" htmlFor={`edit-msg-${m.id}`}>Edit message</label>
+                      <div
+                        className={clsx(
+                          "w-full max-w-[min(100%,42rem)] rounded-3xl border border-divider px-4 pb-3 pt-3",
+                          "bg-default-100 shadow-sm dark:bg-white/[0.06]",
+                        )}
+                      >
+                        <label className="sr-only" htmlFor={`edit-msg-${m.id}`}>
+                          Edit message
+                        </label>
                         <textarea
                           ref={inlineEditTextareaRef}
                           id={`edit-msg-${m.id}`}
                           value={editingDraft}
                           onChange={(e) => setEditingDraft(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Escape") { e.preventDefault(); cancelInlineEdit(); }
-                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void confirmInlineEdit(); }
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelInlineEdit();
+                            }
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              void confirmInlineEdit();
+                            }
                           }}
                           rows={4}
                           disabled={loading}
@@ -895,14 +1138,22 @@ export default function AgentAimPage() {
                             className={clsx(
                               "flex items-center gap-0.5 transition-opacity duration-150",
                               "opacity-100 md:opacity-0 md:group-hover/message:opacity-100 md:group-focus-within/message:opacity-100",
-                              m.role === "user" ? "justify-end pr-0.5" : "justify-start pl-0.5",
+                              m.role === "user"
+                                ? "justify-end pr-0.5"
+                                : "justify-start pl-0.5",
                             )}
                           >
                             <Tooltip>
                               <Tooltip.Trigger
                                 aria-label={copied ? "Copied" : "Copy message"}
-                                className={clsx(msgActionBtn, copied && "bg-default-200 text-default-900 dark:bg-white/15")}
-                                onClick={() => void copyMessageText(m.id, m.content)}
+                                className={clsx(
+                                  msgActionBtn,
+                                  copied &&
+                                    "bg-default-200 text-default-900 dark:bg-white/15",
+                                )}
+                                onClick={() =>
+                                  void copyMessageText(m.id, m.content)
+                                }
                               >
                                 {copied ? <IconCheck /> : <IconCopy />}
                               </Tooltip.Trigger>
@@ -943,15 +1194,15 @@ export default function AgentAimPage() {
           </div>
         )}
 
-        {/* Sticky composer */}
-        {messages.length > 0 ? (
-          <div className={clsx(
+        {/* Composer pinned to bottom */}
+        <div
+          className={clsx(
             "shrink-0 border-t border-transparent px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3",
             "bg-[var(--background)]/95 backdrop-blur-md sm:px-8 sm:pb-8",
-          )}>
-            {composerSection}
-          </div>
-        ) : null}
+          )}
+        >
+          {composerSection}
+        </div>
       </div>
 
       {/* History sidebar */}
@@ -971,14 +1222,27 @@ export default function AgentAimPage() {
           >
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-divider px-3 py-3">
               <div className="flex items-center gap-0.5">
-                <button type="button" className={toolbarBtn} aria-label="Back" onClick={closeHistory}>
+                <button
+                  type="button"
+                  className={toolbarBtn}
+                  aria-label="Back"
+                  onClick={closeHistory}
+                >
                   <IconBack />
                 </button>
-                <button type="button" className={toolbarBtn} aria-label="New chat" onClick={newChat}>
+                <button
+                  type="button"
+                  className={toolbarBtn}
+                  aria-label="New chat"
+                  onClick={newChat}
+                >
                   <IconPlus />
                 </button>
               </div>
-              <h2 id="agent-aim-history-title" className="text-center text-base font-semibold text-default-900">
+              <h2
+                id="agent-aim-history-title"
+                className="text-center text-base font-semibold text-default-900"
+              >
                 Chat history
               </h2>
               <button
@@ -986,35 +1250,64 @@ export default function AgentAimPage() {
                 className={clsx(toolbarBtn, "justify-self-end")}
                 aria-label="Scroll to most recent"
                 title="Most recent first"
-                onClick={() => historyListRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+                onClick={() =>
+                  historyListRef.current?.scrollTo({
+                    top: 0,
+                    behavior: "smooth",
+                  })
+                }
               >
                 <IconHistory />
               </button>
             </div>
 
-            <div ref={historyListRef} className="min-h-0 flex-1 overflow-y-auto p-2">
+            <div
+              ref={historyListRef}
+              className="min-h-0 flex-1 overflow-y-auto p-2"
+            >
               {historySessions.length === 0 ? (
-                <p className="px-3 py-8 text-center text-sm text-muted-foreground">No chats yet</p>
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  No chats yet
+                </p>
               ) : (
                 <ul className="flex flex-col gap-1">
                   {historySessions.map((s) => (
                     <li key={s.id}>
-                      <div className={clsx(
-                        "flex items-stretch gap-0.5 rounded-xl transition-colors",
-                        s.id === activeId ? "bg-[var(--sidebar-item-active)]" : "hover:bg-[var(--sidebar-item-hover)]",
-                      )}>
-                        <button type="button" onClick={() => selectSession(s.id)} className="min-w-0 flex-1 px-3 py-3 text-left">
-                          <span className="line-clamp-2 text-sm font-medium text-default-900">{s.title}</span>
-                          <span className="mt-1 block text-xs text-muted-foreground">{formatSessionTime(s.updatedAt)}</span>
+                      <div
+                        className={clsx(
+                          "flex items-stretch gap-0.5 rounded-xl transition-colors",
+                          s.id === activeId
+                            ? "bg-[var(--sidebar-item-active)]"
+                            : "hover:bg-[var(--sidebar-item-hover)]",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => selectSession(s.id)}
+                          className="min-w-0 flex-1 px-3 py-3 text-left"
+                        >
+                          <span className="line-clamp-2 text-sm font-medium text-default-900">
+                            {s.title}
+                          </span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {formatSessionTime(s.updatedAt)}
+                          </span>
                         </button>
                         <div className="flex shrink-0 items-center pr-1">
                           <Dropdown>
-                            <Dropdown.Trigger className={clsx(toolbarBtn, "text-foreground/80")} aria-label={`Options for ${s.title}`}>
+                            <Dropdown.Trigger
+                              className={clsx(toolbarBtn, "text-foreground/80")}
+                              aria-label={`Options for ${s.title}`}
+                            >
                               <IconMore />
                             </Dropdown.Trigger>
                             <Dropdown.Popover placement="bottom end">
                               <Dropdown.Menu aria-label="Chat options">
-                                <Dropdown.Item key="share" textValue="Share" onPress={() => void shareChatSession(s)}>
+                                <Dropdown.Item
+                                  key="share"
+                                  textValue="Share"
+                                  onPress={() => void shareChatSession(s)}
+                                >
                                   <span className="flex items-center gap-2 text-sm text-default-900">
                                     <IconShare /> Share
                                   </span>
@@ -1041,7 +1334,12 @@ export default function AgentAimPage() {
             </div>
 
             <div className="shrink-0 border-t border-divider bg-[var(--surface)] p-4">
-              <Button fullWidth variant="primary" className="rounded-xl py-3 font-semibold" onPress={newChatFromHistory}>
+              <Button
+                fullWidth
+                variant="primary"
+                className="rounded-xl py-3 font-semibold"
+                onPress={newChatFromHistory}
+              >
                 New Chat
               </Button>
             </div>
@@ -1055,18 +1353,29 @@ export default function AgentAimPage() {
           <Modal.Container placement="center" size="md" className="min-h-0">
             <Modal.Dialog className="border border-divider shadow-xl">
               <Modal.Header>
-                <Modal.Heading className="text-lg font-semibold text-default-900">Delete chat</Modal.Heading>
+                <Modal.Heading className="text-lg font-semibold text-default-900">
+                  Delete chat
+                </Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm leading-relaxed text-default-700">
-                  Are you sure you want to delete the chat &quot;{deleteChatLabel}&quot;? This action cannot be undone.
+                  Are you sure you want to delete the chat &quot;
+                  {deleteChatLabel}&quot;? This action cannot be undone.
                 </p>
               </Modal.Body>
               <Modal.Footer className="flex flex-row justify-end gap-2 pt-2">
-                <Button variant="secondary" className="rounded-xl border border-divider" onPress={() => deleteDialog.close()}>
+                <Button
+                  variant="secondary"
+                  className="rounded-xl border border-divider"
+                  onPress={() => deleteDialog.close()}
+                >
                   Cancel
                 </Button>
-                <Button variant="danger" className="rounded-xl font-semibold" onPress={confirmDelete}>
+                <Button
+                  variant="danger"
+                  className="rounded-xl font-semibold"
+                  onPress={confirmDelete}
+                >
                   Delete
                 </Button>
               </Modal.Footer>

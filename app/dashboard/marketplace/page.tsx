@@ -384,8 +384,12 @@ export default function MarketplacePage() {
 
       {/* ── Build Wizard Modal ─────────────────────────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-background border border-divider rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <form
+            className="bg-background border border-divider rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left"
+            autoComplete="off"
+            onSubmit={(e) => e.preventDefault()}
+          >
 
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-divider">
@@ -398,6 +402,7 @@ export default function MarketplacePage() {
                 </p>
               </div>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={closeWizard}
@@ -431,10 +436,21 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-default-700">
+                    <label
+                      className="text-sm font-bold text-default-700"
+                      htmlFor="build-agent-name"
+                    >
                       Agent Name <span className="text-red-400">*</span>
                     </label>
                     <input
+                      id="build-agent-name"
+                      name="build-agent-display-name"
+                      type="text"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-lpignore="true"
+                      data-1p-ignore
                       placeholder="e.g. Research Assistant"
                       className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors"
                       value={customName}
@@ -443,8 +459,21 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-default-700">Description</label>
+                    <label
+                      className="text-sm font-bold text-default-700"
+                      htmlFor="build-agent-summary"
+                    >
+                      Description
+                    </label>
                     <input
+                      id="build-agent-summary"
+                      name="build-agent-summary"
+                      type="text"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-lpignore="true"
+                      data-1p-ignore
                       placeholder="Short description of what this agent does"
                       className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors"
                       value={customDescription}
@@ -453,10 +482,20 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-default-700">
+                    <label
+                      className="text-sm font-bold text-default-700"
+                      htmlFor="build-agent-instructions"
+                    >
                       Instructions <span className="text-red-400">*</span>
                     </label>
                     <textarea
+                      id="build-agent-instructions"
+                      name="build-agent-instructions"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-lpignore="true"
+                      data-1p-ignore
                       placeholder="How should this agent behave? What are its goals?"
                       className="w-full min-h-[120px] bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors resize-none"
                       value={customInstructions}
@@ -465,14 +504,24 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-default-700">
+                    <label
+                      className="text-sm font-bold text-default-700"
+                      htmlFor="build-agent-github-pat"
+                    >
                       GitHub Personal Access Token
                     </label>
                     <p className="text-xs text-default-400">
                       Needs <code className="bg-default-100 px-1 rounded">repo</code> scope to fork &amp; push. Leave blank to use the server token.
                     </p>
                     <input
+                      id="build-agent-github-pat"
+                      name="build-agent-github-pat"
                       type="password"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-lpignore="true"
+                      data-1p-ignore
                       placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                       className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-primary/60 transition-colors"
                       value={githubPat}
@@ -653,6 +702,7 @@ root_agent = Agent(
             {/* Modal Footer */}
             <div className="p-6 border-t border-divider bg-background/50 flex justify-between items-center gap-3">
               <Button
+                type="button"
                 variant="ghost"
                 onClick={() => {
                   if (step === 0) closeWizard();
@@ -667,6 +717,7 @@ root_agent = Agent(
               <div className="flex items-center gap-3">
                 {step < 2 && (
                   <Button
+                    type="button"
                     className="font-bold min-w-[120px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                     isDisabled={!canAdvanceStep()}
                     onClick={() => setStep((s) => s + 1)}
@@ -677,6 +728,7 @@ root_agent = Agent(
 
                 {step === 2 && !buildResult && (
                   <Button
+                    type="button"
                     className="font-bold min-w-[140px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                     isDisabled={building}
                     onClick={handleBuild}
@@ -693,6 +745,7 @@ root_agent = Agent(
 
                 {step === 2 && buildResult && !buildResult.error && (
                   <Button
+                    type="button"
                     className="font-bold h-10 px-6 bg-primary text-primary-foreground"
                     onClick={closeWizard}
                   >
@@ -702,6 +755,7 @@ root_agent = Agent(
 
                 {step === 2 && buildResult?.error && (
                   <Button
+                    type="button"
                     className="font-bold h-10 px-6 bg-primary text-primary-foreground"
                     onClick={() => {
                       setBuildResult(null);
@@ -713,7 +767,7 @@ root_agent = Agent(
                 )}
               </div>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>
