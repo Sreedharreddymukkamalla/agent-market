@@ -12,5 +12,5 @@ export const StyledSidebarToggle = tv({
 
 /** Inside sidebar rail: minimal hover (ChatGPT header close control). */
 export const StyledSidebarRailToggle = tv({
-  base: "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-default-700 outline-none transition-colors duration-150 hover:bg-[var(--sidebar-item-hover)] focus-visible:ring-2 focus-visible:ring-focus",
+  base: "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-default-700 outline-none transition-colors duration-150 hover:bg-[var(--sidebar-item-hover)] focus-visible:ring-2 focus-visible:ring-focus",
 });

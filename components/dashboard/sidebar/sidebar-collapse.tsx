@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import clsx from "clsx";
+import { Popover } from "@heroui/react";
 import { useSidebarContext } from "../layout-context";
 import { usePathname } from "next/navigation";
 
@@ -50,27 +51,56 @@ export const SidebarCollapse = ({
   });
 
   const [isOpen, setIsOpen] = useState(defaultOpen || hasActiveChild);
+  const [railFlyoutOpen, setRailFlyoutOpen] = useState(false);
 
   useEffect(() => {
     if (hasActiveChild) setIsOpen(true);
   }, [hasActiveChild]);
 
   if (compact) {
-    // In compact mode, maybe just show the icon or a tooltip?
-    // For now, let's just show the icon.
     return (
       <div className="flex w-full justify-center px-0.5 py-1">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl text-default-600 hover:bg-[var(--sidebar-item-hover)] transition-colors">
-          <span className="flex items-center justify-center [&_svg]:size-5">
-            {icon}
-          </span>
-        </div>
+        <Popover isOpen={railFlyoutOpen} onOpenChange={setRailFlyoutOpen}>
+          <Popover.Trigger
+            aria-label={`${title} menu`}
+            className={clsx(
+              "flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-default-600 outline-none transition-colors hover:bg-[var(--sidebar-item-hover)]",
+              hasActiveChild &&
+                "bg-[var(--sidebar-item-active)] text-[var(--sidebar-fg-active)] [&_.text-default-500]:text-[var(--sidebar-fg-active)]",
+            )}
+          >
+            <span className="flex items-center justify-center text-inherit [&_svg]:size-5">
+              {icon}
+            </span>
+          </Popover.Trigger>
+          <Popover.Content
+            placement="right top"
+            offset={10}
+            className="rounded-2xl border border-divider bg-[var(--overlay)] p-1.5 shadow-[var(--overlay-shadow)] outline-none"
+          >
+            <Popover.Dialog className="max-h-[min(70dvh,24rem)] min-w-[13.5rem] overflow-y-auto outline-none">
+              <Popover.Heading className="px-2 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {title}
+              </Popover.Heading>
+              <div className="flex flex-col gap-1">
+                {React.Children.map(children, (child) =>
+                  React.isValidElement(child)
+                    ? React.cloneElement(child as React.ReactElement<any>, {
+                        forceShowLabel: true,
+                        onActivate: () => setRailFlyoutOpen(false),
+                      })
+                    : child,
+                )}
+              </div>
+            </Popover.Dialog>
+          </Popover.Content>
+        </Popover>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-0.5 w-full">
+    <div className="flex w-full flex-col gap-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={clsx(
@@ -99,7 +129,7 @@ export const SidebarCollapse = ({
         )}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-0.5 pl-3 mt-0.5 relative ml-4">
+          <div className="relative ml-4 mt-0 flex flex-col gap-1 pl-3">
             <div className="absolute left-0 top-0 bottom-3 w-px bg-default-100" />
             {children}
           </div>
