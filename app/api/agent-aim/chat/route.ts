@@ -1,10 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { createMCPClient } from "@ai-sdk/mcp";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
 export const maxDuration = 60;
+
+const ADK_BASE_URL =
+  "https://capital-agent-service-git-475756125529.us-central1.run.app";
+const APP_NAME = "my_agent_new";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,57 +16,155 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body;
+  let body: { messages?: { role: string; content: string }[] };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { messages, mcpEndpoints } = body;
+  const messages = body.messages ?? [];
+  const userMessage = messages.findLast((m) => m.role === "user")?.content ?? "";
 
-  const allClients: any[] = [];
-  const allTools: any = {};
-
-  if (Array.isArray(mcpEndpoints) && mcpEndpoints.length > 0) {
-    for (const url of mcpEndpoints) {
-      try {
-        const transport = new SSEClientTransport(new URL(url));
-        await transport.start();
-        // createMCPClient returns a Promise<MCPClient>
-        const client = await createMCPClient({ transport });
-        // Fetch tools from the remote server
-        const remoteTools = await client.tools();
-        Object.assign(allTools, remoteTools);
-        allClients.push(client);
-      } catch (e) {
-        console.error(`Failed to load MCP tools from ${url}:`, e);
-      }
-    }
+  if (!userMessage.trim()) {
+    return Response.json({ error: "Empty message" }, { status: 400 });
   }
 
-  const result = await streamText({
-    model: openai("gpt-4o-mini"),
-    system: "You are Agent Aim, a concise assistant inside Agent Market. Use the provided tools if needed to answer the user's questions.",
-    messages: (messages || []).map((m: any) => ({
-      role: m.role,
-      content: m.content,
-    })),
-    tools: allTools,
-    // @ts-ignore - maxSteps is supported in runtime for AI SDK 3.x+
-    maxSteps: 5,
-    onFinish: async () => {
-      // Cleanup connections
-      for (const client of allClients) {
-        try {
-          await client.close();
-        } catch (e) {
-          console.error("Error closing MCP client:", e);
+  // Use the Supabase user ID as a stable ADK user ID
+  const userId = `supabase-${user.id}`;
+
+  // 1. Create a new ADK session for this conversation turn
+  let sessionId: string;
+  try {
+    const sessionRes = await fetch(
+      `${ADK_BASE_URL}/apps/${APP_NAME}/users/${userId}/sessions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+    if (!sessionRes.ok) {
+      const text = await sessionRes.text();
+      return new Response(`ADK session error: ${text}`, { status: 502 });
+    }
+    const sessionData = (await sessionRes.json()) as { id: string };
+    sessionId = sessionData.id;
+  } catch (e) {
+    return new Response(`Failed to reach ADK service: ${String(e)}`, {
+      status: 502,
+    });
+  }
+
+  // 2. Stream the ADK response via SSE → pipe plain text back to the client
+  let adkRes: Response;
+  try {
+    adkRes = await fetch(`${ADK_BASE_URL}/run_sse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        app_name: APP_NAME,
+        user_id: userId,
+        session_id: sessionId,
+        new_message: {
+          role: "user",
+          parts: [{ text: userMessage }],
+        },
+        streaming: true,
+      }),
+    });
+  } catch (e) {
+    return new Response(`Failed to reach ADK service: ${String(e)}`, {
+      status: 502,
+    });
+  }
+
+  if (!adkRes.ok || !adkRes.body) {
+    const text = await adkRes.text().catch(() => adkRes.statusText);
+    return new Response(`ADK error: ${text}`, { status: 502 });
+  }
+
+  // Transform ADK SSE events → plain text stream (matches what AgentAimPage expects)
+  const encoder = new TextEncoder();
+  const adkBody = adkRes.body;
+
+  const readable = new ReadableStream({
+    async start(controller) {
+      const reader = adkBody.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          // Keep the last (potentially incomplete) line in the buffer
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const raw = line.slice(6).trim();
+            if (!raw || raw === "[DONE]") continue;
+
+            try {
+              const event = JSON.parse(raw) as {
+                content?: {
+                  role?: string;
+                  parts?: { text?: string }[];
+                };
+              };
+
+              // Only emit model/assistant turns
+              if (event.content?.role !== "model") continue;
+
+              const text = (event.content.parts ?? [])
+                .map((p) => p.text ?? "")
+                .join("");
+
+              if (text) {
+                controller.enqueue(encoder.encode(text));
+              }
+            } catch {
+              // skip malformed events
+            }
+          }
         }
+
+        // Flush remaining buffer
+        if (buffer.startsWith("data: ")) {
+          const raw = buffer.slice(6).trim();
+          if (raw && raw !== "[DONE]") {
+            try {
+              const event = JSON.parse(raw) as {
+                content?: { role?: string; parts?: { text?: string }[] };
+              };
+              if (event.content?.role === "model") {
+                const text = (event.content.parts ?? [])
+                  .map((p) => p.text ?? "")
+                  .join("");
+                if (text) controller.enqueue(encoder.encode(text));
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+      } catch (e) {
+        controller.error(e);
+      } finally {
+        controller.close();
       }
     },
   });
 
-  // @ts-ignore - toDataStreamResponse is the standard way to return a stream in AI SDK 3.x+
-  return result.toDataStreamResponse();
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Transfer-Encoding": "chunked",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }

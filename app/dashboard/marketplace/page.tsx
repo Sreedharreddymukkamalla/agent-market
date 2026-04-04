@@ -1,23 +1,115 @@
 "use client";
 
-import { Card, Button, Chip, TextField, InputGroup, Spinner } from "@heroui/react";
+import { Card, Button, Chip, Spinner } from "@heroui/react";
 import React, { useEffect, useState } from "react";
-import { SearchIcon, PlusIcon } from "@/components/icons";
+import { PlusIcon } from "@/components/icons";
 import { AgentTemplate } from "@/types/agent";
 import { createClient } from "@/utils/supabase/client";
 
+// ─── Step indicator ──────────────────────────────────────────────────────────
+const steps = ["Configure", "Add MCPs", "Deploy"];
+
+function StepBar({ current }: { current: number }) {
+  return (
+    <div className="flex items-center gap-0 mb-6">
+      {steps.map((label, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <React.Fragment key={label}>
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${done
+                    ? "bg-primary text-white"
+                    : active
+                      ? "bg-primary/20 border-2 border-primary text-primary"
+                      : "bg-default-100 text-default-400"
+                  }`}
+              >
+                {done ? "✓" : i + 1}
+              </div>
+              <span
+                className={`text-[10px] font-medium whitespace-nowrap ${active ? "text-primary" : done ? "text-default-600" : "text-default-400"
+                  }`}
+              >
+                {label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className={`flex-1 h-[2px] mb-4 mx-2 transition-all duration-500 ${i < current ? "bg-primary" : "bg-default-200"
+                  }`}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Status log item ─────────────────────────────────────────────────────────
+type StatusState = "pending" | "running" | "done" | "error";
+interface LogItem {
+  label: string;
+  state: StatusState;
+}
+
+function StatusLog({ items }: { items: LogItem[] }) {
+  return (
+    <div className="flex flex-col gap-2 mt-2">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-center gap-3 text-sm">
+          <span className="w-5 text-center">
+            {item.state === "running" && <Spinner size="sm" color="current" />}
+            {item.state === "done" && <span className="text-green-500 font-bold">✓</span>}
+            {item.state === "error" && <span className="text-red-500 font-bold">✕</span>}
+            {item.state === "pending" && <span className="text-default-300">○</span>}
+          </span>
+          <span
+            className={
+              item.state === "done"
+                ? "text-default-700"
+                : item.state === "running"
+                  ? "text-primary font-medium"
+                  : item.state === "error"
+                    ? "text-red-500"
+                    : "text-default-400"
+            }
+          >
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function MarketplacePage() {
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deploying, setDeploying] = useState<string | null>(null);
   const [presets, setPresets] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [prefillTemplate, setPrefillTemplate] = useState<AgentTemplate | null>(null);
 
-  // Form State
+  // Wizard state
+  const [step, setStep] = useState(0);
   const [customName, setCustomName] = useState("");
+  const [customDescription, setCustomDescription] = useState("");
   const [customInstructions, setCustomInstructions] = useState("");
+  const [githubPat, setGithubPat] = useState("");
   const [selectedEndpoints, setSelectedEndpoints] = useState<string[]>([]);
+  const [buildLog, setBuildLog] = useState<LogItem[]>([]);
+  const [buildResult, setBuildResult] = useState<{
+    github_repo?: string;
+    cloud_run_url?: string;
+    error?: string;
+  } | null>(null);
+  const [building, setBuilding] = useState(false);
+
+  // Deploy-template button state
+  const [deploying, setDeploying] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -38,10 +130,7 @@ export default function MarketplacePage() {
 
   const fetchTemplates = async () => {
     try {
-      const { data, error } = await supabase
-        .from("adk_agent_templates")
-        .select("*");
-
+      const { data, error } = await supabase.from("adk_agent_templates").select("*");
       if (error) throw error;
       setTemplates(data || []);
     } catch (error) {
@@ -51,29 +140,53 @@ export default function MarketplacePage() {
     }
   };
 
+  // ── Open wizard (optionally pre-filled from a template) ───────────────────
+  const openWizard = (template?: AgentTemplate) => {
+    setPrefillTemplate(template || null);
+    setCustomName(template?.name ?? "");
+    setCustomDescription(template?.description ?? "");
+    setCustomInstructions(template?.instructions ?? "");
+    setSelectedEndpoints(template?.mcp_sse_endpoints ?? []);
+    setGithubPat("");
+    setStep(0);
+    setBuildLog([]);
+    setBuildResult(null);
+    setBuilding(false);
+    setIsModalOpen(true);
+  };
+
+  const closeWizard = () => {
+    if (building) return;
+    setIsModalOpen(false);
+  };
+
+  // ── "Deploy Template" quick-save (stores to DB only, no fork) ────────────
   const handleDeploy = async (template: AgentTemplate) => {
     setDeploying(template.id);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         alert("Please log in to deploy agents.");
         return;
       }
 
-
       const { error: upsertError } = await supabase
         .from("adk_agents")
-        .upsert({
-          user_id: user.id,
-          name: template.name,
-          instructions: template.instructions,
-          mcp_sse_endpoints: template.mcp_sse_endpoints,
-          status: "inactive"
-        }, { onConflict: 'name' });
+        .upsert(
+          {
+            user_id: user.id,
+            name: template.name,
+            instructions: template.instructions,
+            mcp_sse_endpoints: template.mcp_sse_endpoints,
+            status: "inactive",
+          },
+          { onConflict: "name" }
+        );
 
       if (upsertError) throw upsertError;
-      alert(`Successfully deployed ${template.name}!`);
+      alert(`Successfully saved ${template.name}!`);
     } catch (error: any) {
       console.error("Deployment error:", error);
       alert(error.message || "An unexpected error occurred.");
@@ -82,45 +195,108 @@ export default function MarketplacePage() {
     }
   };
 
-  const handleCreateCustomAgent = async () => {
+  // ── Build Agent (fork → patch → push) ────────────────────────────────────
+  const handleBuild = async () => {
     if (!customName || !customInstructions) {
       alert("Please provide both a name and instructions.");
       return;
     }
 
-    setCreating(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (!user) {
+      alert("Please log in to build agents.");
+      return;
+    }
+
+    setBuilding(true);
+    setBuildLog([
+      { label: "Forking template repository...", state: "running" },
+      { label: "Patching agent.py with your config...", state: "pending" },
+      { label: "Pushing to GitHub (triggers Cloud Run deploy)...", state: "pending" },
+      { label: "Saving to Agent Market...", state: "pending" },
+    ]);
+
+    // Derive GitHub username from the PAT via GitHub API, or use env fallback
+    let github_username = process.env.NEXT_PUBLIC_GITHUB_USERNAME || "";
+
+    if (githubPat) {
+      try {
+        const ghUser = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `Bearer ${githubPat}` },
+        }).then((r) => r.json());
+        if (ghUser.login) github_username = ghUser.login;
+      } catch (_) { }
+    }
+
+    if (!github_username) {
+      setBuildLog([
+        {
+          label: "GitHub username could not be determined. Please provide a valid PAT.",
+          state: "error",
+        },
+      ]);
+      setBuilding(false);
+      return;
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        alert("Please log in to create agents.");
-        return;
+      // Step 1 running → Step 2 running
+      await new Promise((r) => setTimeout(r, 500));
+
+      const response = await fetch('/api/agent-market/build', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: customName,
+          description: customDescription,
+          instructions: customInstructions,
+          mcp_urls: selectedEndpoints,
+          github_token: githubPat,
+          github_username,
+        }),
+      });
+
+      const json = await response.json();
+
+      if (!response.ok || json.error) {
+        throw new Error(json.error || "Unknown error from build API endpoint");
       }
 
-      const { error: upsertError } = await supabase
-        .from("adk_agents")
-        .upsert({
-          user_id: user.id,
-          name: customName,
-          instructions: customInstructions,
-          mcp_sse_endpoints: selectedEndpoints,
-          status: "inactive"
-        }, { onConflict: 'name' });
-
-      if (upsertError) throw upsertError;
-
-      alert(`Successfully created custom agent: ${customName}!`);
-      setIsModalOpen(false);
-      setCustomName("");
-      setCustomInstructions("");
-      setSelectedEndpoints([]);
-
-    } catch (error: any) {
-      console.error("Creation error:", error);
-      alert(error.message || "An unexpected error occurred.");
+      setBuildLog([
+        { label: "Forked template repository", state: "done" },
+        { label: "Patched agent.py with your config", state: "done" },
+        { label: "Pushed to GitHub (Cloud Run deploy triggered)", state: "done" },
+        { label: "Saved to Agent Market", state: "done" },
+      ]);
+      setBuildResult({
+        github_repo: json.github_repo,
+        cloud_run_url: json.cloud_run_url,
+      });
+    } catch (err: any) {
+      console.error("Build error:", err);
+      setBuildLog((prev) =>
+        prev.map((item) =>
+          item.state === "running" || item.state === "pending"
+            ? { ...item, state: "error" }
+            : item
+        )
+      );
+      setBuildResult({ error: err.message });
     } finally {
-      setCreating(false);
+      setBuilding(false);
     }
   };
+
+  // ── Step validation ────────────────────────────────────────────────────────
+  const canAdvanceStep = () => {
+    if (step === 0) return customName.trim() !== "" && customInstructions.trim() !== "";
+    return true;
+  };
+
+  // ────────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -133,34 +309,23 @@ export default function MarketplacePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-bold text-default-900">Agent MarketPlace</h1>
-          <p className="text-default-500">Discover or create your own custom AI agents.</p>
+          <p className="text-default-500">Discover and build your own AI agents on GitHub + Cloud Run.</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-          <Button
-            className="font-bold flex gap-2 h-10 px-6 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <PlusIcon size={20} />
-            Create My Agent
-          </Button>
-
-          <div className="w-full md:w-80">
-            <TextField aria-label="Search templates">
-              <InputGroup>
-                <InputGroup.Prefix>
-                  <SearchIcon className="text-muted-foreground" size={18} />
-                </InputGroup.Prefix>
-                <InputGroup.Input placeholder="Search templates..." />
-              </InputGroup>
-            </TextField>
-          </div>
-        </div>
+        <Button
+          className="font-bold flex gap-2 h-10 px-6 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+          onClick={() => openWizard()}
+        >
+          <PlusIcon size={20} />
+          Build Agent
+        </Button>
       </div>
 
+      {/* Template grid */}
       {templates.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border-2 border-dashed border-divider rounded-xl">
           <p className="text-default-500">No templates found.</p>
@@ -188,116 +353,365 @@ export default function MarketplacePage() {
                 </p>
               </div>
 
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center gap-2">
                 <span className="text-lg font-bold text-default-900">
                   {template.price === 0 ? "Free" : `$${template.price}/mo`}
                 </span>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="font-bold min-w-[120px] h-10 shadow-sm hover:shadow-md hover:shadow-primary/10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                  isDisabled={deploying !== null}
-                  onClick={() => handleDeploy(template)}
-                >
-                  {deploying === template.id ? <Spinner size="sm" color="current" /> : "Deploy Template"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="font-medium h-9 px-4 hover:bg-default-100 transition-colors"
+                    isDisabled={deploying !== null}
+                    onClick={() => handleDeploy(template)}
+                  >
+                    {deploying === template.id ? <Spinner size="sm" color="current" /> : "Quick Save"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="font-bold h-9 px-4 shadow-sm hover:shadow-md hover:shadow-primary/10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    onClick={() => openWizard(template)}
+                  >
+                    Build Agent
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Custom Modal Overlay */}
+      {/* ── Build Wizard Modal ─────────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-background border border-divider rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-left">
+          <div className="bg-background border border-divider rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left">
+
+            {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-divider">
               <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold text-default-900">Create Custom Agent</h2>
-                <p className="text-sm text-default-500">Define your agent's personality and tools.</p>
+                <h2 className="text-xl font-bold text-default-900">
+                  {prefillTemplate ? `Build: ${prefillTemplate.name}` : "Build Agent"}
+                </h2>
+                <p className="text-sm text-default-500">
+                  Fork → Configure → Deploy to Cloud Run via GitHub Actions
+                </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeWizard}
+                isDisabled={building}
                 className="min-w-0 p-2 rounded-full hover:bg-default-100 transition-colors"
               >
                 ✕
               </Button>
             </div>
 
-            <div className="flex-grow overflow-y-auto p-6 space-y-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-default-700">Agent Name</label>
-                <TextField aria-label="Agent Name">
-                  <InputGroup>
-                    <InputGroup.Input
-                      placeholder="e.g. Research Assistant"
-                      value={customName}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomName(e.target.value)}
-                    />
-                  </InputGroup>
-                </TextField>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-default-700">Instructions</label>
-                <textarea
-                  placeholder="How should this agent behave? What are its goals?"
-                  className="w-full min-h-[120px] bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-default-400 transition-colors"
-                  value={customInstructions}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomInstructions(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-default-700">MCP Endpoints (Tools)</label>
-                <p className="text-xs text-default-400 mb-2">Select the background services this agent can use.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {presets.map((preset) => (
-                    <div
-                      key={preset.url}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedEndpoints.includes(preset.url)
-                          ? "bg-primary/5 border-primary shadow-sm"
-                          : "bg-surface border-divider hover:border-default-400"
-                        }`}
-                      onClick={() => {
-                        setSelectedEndpoints(prev =>
-                          prev.includes(preset.url)
-                            ? prev.filter(u => u !== preset.url)
-                            : [...prev, preset.url]
-                        );
-                      }}
-                    >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedEndpoints.includes(preset.url) ? "bg-primary border-primary" : "border-default-400"
-                        }`}>
-                        {selectedEndpoints.includes(preset.url) && <span className="text-[10px] text-white font-bold">✓</span>}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold truncate">{preset.name}</span>
-                        <span className="text-[10px] text-default-400 truncate">{preset.url}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Step Bar */}
+            <div className="px-6 pt-5">
+              <StepBar current={step} />
             </div>
 
-            <div className="p-6 border-t border-divider bg-background/50 flex justify-end gap-3">
-              <Button 
-                variant="ghost" 
-                onClick={() => setIsModalOpen(false)}
+            {/* Step Content */}
+            <div className="flex-grow overflow-y-auto px-6 pb-4 space-y-5">
+
+              {/* ─── Step 0: Configure ─────────────────────────────────────── */}
+              {step === 0 && (
+                <>
+                  {/* Template badge */}
+                  <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-xl text-sm">
+                    <span className="text-lg">📦</span>
+                    <span className="text-default-700 font-medium">
+                      Template:{" "}
+                      <span className="text-primary font-bold">
+                        Sreedharreddymukkamalla/myagent_adk
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-bold text-default-700">
+                      Agent Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      placeholder="e.g. Research Assistant"
+                      className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-bold text-default-700">Description</label>
+                    <input
+                      placeholder="Short description of what this agent does"
+                      className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors"
+                      value={customDescription}
+                      onChange={(e) => setCustomDescription(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-bold text-default-700">
+                      Instructions <span className="text-red-400">*</span>
+                    </label>
+                    <textarea
+                      placeholder="How should this agent behave? What are its goals?"
+                      className="w-full min-h-[120px] bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors resize-none"
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-bold text-default-700">
+                      GitHub Personal Access Token
+                    </label>
+                    <p className="text-xs text-default-400">
+                      Needs <code className="bg-default-100 px-1 rounded">repo</code> scope to fork &amp; push. Leave blank to use the server token.
+                    </p>
+                    <input
+                      type="password"
+                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                      className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-primary/60 transition-colors"
+                      value={githubPat}
+                      onChange={(e) => setGithubPat(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* ─── Step 1: Select MCPs ────────────────────────────────────── */}
+              {step === 1 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-default-500">
+                      Select the MCP tools this agent can use. Each will be added as a{" "}
+                      <code className="bg-default-100 px-1 rounded text-xs">McpToolset</code> in{" "}
+                      <code className="bg-default-100 px-1 rounded text-xs">agent.py</code>.
+                    </p>
+                    {selectedEndpoints.length > 0 && (
+                      <Chip size="sm" variant="soft" className="bg-primary/10 text-primary font-bold">
+                        {selectedEndpoints.length} selected
+                      </Chip>
+                    )}
+                  </div>
+
+                  {presets.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-divider rounded-xl text-default-400 text-sm">
+                      No MCP servers found in your database.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {presets.map((preset) => {
+                        const selected = selectedEndpoints.includes(preset.url);
+                        return (
+                          <div
+                            key={preset.url}
+                            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${selected
+                                ? "bg-primary/5 border-primary shadow-sm"
+                                : "bg-surface border-divider hover:border-default-400"
+                              }`}
+                            onClick={() => {
+                              setSelectedEndpoints((prev) =>
+                                prev.includes(preset.url)
+                                  ? prev.filter((u) => u !== preset.url)
+                                  : [...prev, preset.url]
+                              );
+                            }}
+                          >
+                            <div
+                              className={`mt-0.5 w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-default-400"
+                                }`}
+                            >
+                              {selected && <span className="text-[10px] text-white font-bold">✓</span>}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-sm font-bold truncate">{preset.name}</span>
+                              {preset.description && (
+                                <span className="text-[11px] text-default-500 mt-0.5 line-clamp-2">
+                                  {preset.description}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-default-400 truncate mt-0.5">
+                                {preset.url}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ─── Step 2: Review & Deploy ─────────────────────────────────── */}
+              {step === 2 && (
+                <>
+                  {!buildResult ? (
+                    <>
+                      {/* Preview code */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-bold text-default-700">
+                          Generated <code className="bg-default-100 px-1 rounded">agent.py</code> preview
+                        </label>
+                        <pre className="bg-default-900 text-green-400 text-[11px] rounded-xl p-4 overflow-x-auto leading-relaxed">
+                          {`from google.adk.agents.llm_agent import Agent
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+
+root_agent = Agent(
+    model='gemini-2.5-flash',
+    name='${customName.toLowerCase().replace(/[^a-z0-9_]/g, "_")}',
+    description='${(customDescription || customName).replace(/'/g, "\\'").slice(0, 60)}',
+    instruction="""
+        ${customInstructions.trim().slice(0, 120)}${customInstructions.length > 120 ? "..." : ""}
+    """,
+    tools=[${selectedEndpoints.length === 0
+                              ? "\n        # No MCPs selected"
+                              : selectedEndpoints.map(u => `\n        McpToolset(connection_params=StreamableHTTPConnectionParams(url="${u}")),`).join("")}
+    ],
+)`}
+                        </pre>
+                      </div>
+
+                      {/* Summary */}
+                      <div className="flex flex-col gap-2 p-4 bg-default-50 rounded-xl border border-divider text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-default-500">GitHub repo will be:</span>
+                          <span className="font-mono text-primary text-xs">
+                            {(process.env.NEXT_PUBLIC_GITHUB_USERNAME || "your-username")}/{customName.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-agent
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-default-500">MCPs attached:</span>
+                          <span className="font-bold">{selectedEndpoints.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-default-500">Deploy via:</span>
+                          <span className="font-bold text-default-700">GitHub Actions → Cloud Run</span>
+                        </div>
+                      </div>
+
+                      {/* Log */}
+                      {buildLog.length > 0 && <StatusLog items={buildLog} />}
+                    </>
+                  ) : buildResult.error ? (
+                    <div className="flex flex-col gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+                      <p className="font-bold text-red-600">Build failed</p>
+                      <p className="text-sm text-red-500">{buildResult.error}</p>
+                      <StatusLog items={buildLog} />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col items-center gap-2 py-4">
+                        <span className="text-5xl">🚀</span>
+                        <p className="text-xl font-bold text-default-900">Agent Built!</p>
+                        <p className="text-sm text-default-500 text-center">
+                          Your GitHub repo was created and is now being deployed to Cloud Run via GitHub Actions.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <a
+                          href={buildResult.github_repo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 bg-default-50 border border-divider hover:border-default-300 rounded-xl transition-colors group"
+                        >
+                          <span className="text-2xl">📂</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold group-hover:text-primary transition-colors">
+                              GitHub Repository
+                            </span>
+                            <span className="text-xs text-default-400 truncate">
+                              {buildResult.github_repo}
+                            </span>
+                          </div>
+                          <span className="ml-auto text-default-400 text-xs">↗</span>
+                        </a>
+
+                        <div className="flex items-center gap-3 p-3 bg-default-50 border border-divider rounded-xl">
+                          <span className="text-2xl">☁️</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold">Cloud Run deploying...</span>
+                            <span className="text-xs text-default-400">
+                              Check the Actions tab in your GitHub repo for deploy status.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <StatusLog items={buildLog} />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-divider bg-background/50 flex justify-between items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (step === 0) closeWizard();
+                  else setStep((s) => s - 1);
+                }}
+                isDisabled={building}
                 className="font-medium hover:bg-default-100 transition-colors"
               >
-                Cancel
+                {step === 0 ? "Cancel" : "← Back"}
               </Button>
-              <Button
-                className="font-bold min-w-[120px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                isDisabled={creating}
-                onClick={handleCreateCustomAgent}
-              >
-                {creating ? <Spinner size="sm" color="current" /> : "Build Agent"}
-              </Button>
+
+              <div className="flex items-center gap-3">
+                {step < 2 && (
+                  <Button
+                    className="font-bold min-w-[120px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    isDisabled={!canAdvanceStep()}
+                    onClick={() => setStep((s) => s + 1)}
+                  >
+                    Next →
+                  </Button>
+                )}
+
+                {step === 2 && !buildResult && (
+                  <Button
+                    className="font-bold min-w-[140px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    isDisabled={building}
+                    onClick={handleBuild}
+                  >
+                    {building ? (
+                      <span className="flex items-center gap-2">
+                        <Spinner size="sm" color="current" /> Building...
+                      </span>
+                    ) : (
+                      "🚀 Build & Deploy"
+                    )}
+                  </Button>
+                )}
+
+                {step === 2 && buildResult && !buildResult.error && (
+                  <Button
+                    className="font-bold h-10 px-6 bg-primary text-primary-foreground"
+                    onClick={closeWizard}
+                  >
+                    Done ✓
+                  </Button>
+                )}
+
+                {step === 2 && buildResult?.error && (
+                  <Button
+                    className="font-bold h-10 px-6 bg-primary text-primary-foreground"
+                    onClick={() => {
+                      setBuildResult(null);
+                      setBuildLog([]);
+                    }}
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
