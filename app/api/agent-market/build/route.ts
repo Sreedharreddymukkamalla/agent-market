@@ -41,18 +41,23 @@ async function waitForFork(owner: string, repo: string, token: string, maxWaitMs
 // Build agent.py file content
 function buildAgentPy(name: string, description: string, instructions: string, mcpUrls: string[]): string {
   const safeName = name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+  
+  const mcpImports = mcpUrls.length > 0
+    ? `from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams`
+    : "";
+
   const toolsBlock = mcpUrls.length > 0
-    ? mcpUrls
-      .map(
-        (url) =>
-          `        McpToolset(\n            connection_params=StreamableHTTPConnectionParams(\n                url="${url}",\n            ),\n        )`
-      )
-      .join(",\n")
-    : `        McpToolset(\n            connection_params=StreamableHTTPConnectionParams(\n                url="https://example.com/mcp",\n            ),\n        )`;
+    ? `,\n    tools=[\n${mcpUrls
+        .map(
+          (url) =>
+            `        McpToolset(\n            connection_params=StreamableHTTPConnectionParams(\n                url="${url}",\n            ),\n        )`
+        )
+        .join(",\n")}\n    ]`
+    : "";
 
   return `from google.adk.agents.llm_agent import Agent
-from google.adk.tools.mcp_tool import McpToolset
-from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+${mcpImports}
 
 root_agent = Agent(
     model='gemini-2.5-flash',
@@ -60,10 +65,7 @@ root_agent = Agent(
     description='${description.replace(/'/g, "\\'").replace(/\n/g, " ")}',
     instruction="""
         ${instructions.trim()}
-    """,
-    tools=[
-${toolsBlock}
-    ],
+    """${toolsBlock}
 )
 `;
 }

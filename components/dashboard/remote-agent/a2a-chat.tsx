@@ -1,7 +1,5 @@
 "use client";
 
-// components/A2AChat.tsx
-
 import {
   useState,
   useRef,
@@ -10,192 +8,39 @@ import {
   KeyboardEvent,
 } from "react";
 import {
+  Button,
+  Spinner,
+  Tooltip,
+} from "@heroui/react";
+import clsx from "clsx";
+import {
   streamMessage,
   getAgentCard,
   ChatMessage,
 } from "@/components/dashboard/remote-agent/a2a-client";
+import {
+  IconSend,
+  IconPlus,
+  IconMic,
+  IconCopy,
+  IconCheck,
+} from "@/components/agent-aim/icons";
 
 // ---------------------------------------------------------------------------
-// Styles — defined outside component so they're never recreated on render
+// Helpers
 // ---------------------------------------------------------------------------
 
-const S = {
-  root: {
-    display: "flex",
-    flexDirection: "column" as const,
-    height: "100%",
-    minHeight: 520,
-    background: "#0d0f14",
-    border: "1px solid #252934",
-    borderRadius: 12,
-    overflow: "hidden",
-    fontFamily: "'Syne', sans-serif",
-    color: "#e2e8f0",
-  },
-  hdr: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "14px 20px",
-    background: "#13161d",
-    borderBottom: "1px solid #252934",
-    flexShrink: 0,
-  },
-  hdrName: {
-    fontWeight: 700,
-    fontSize: 14,
-    letterSpacing: ".04em",
-    color: "#e2e8f0",
-  },
-  hdrDesc: {
-    fontFamily: "monospace",
-    fontSize: 11,
-    color: "#64748b",
-    marginTop: 2,
-  },
-  badge: {
-    fontFamily: "monospace",
-    fontSize: 10,
-    padding: "3px 8px",
-    borderRadius: 4,
-    background: "#2d5c4a",
-    color: "#6ee7b7",
-    letterSpacing: ".05em",
-    flexShrink: 0,
-  },
-  msgs: {
-    flex: 1,
-    overflowY: "auto" as const,
-    padding: 20,
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: 16,
-  },
-  empty: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    color: "#64748b",
-    fontFamily: "monospace",
-    fontSize: 12,
-    textAlign: "center" as const,
-    padding: 40,
-  },
-  err: {
-    fontFamily: "monospace",
-    fontSize: 12,
-    color: "#f87171",
-    background: "rgba(248,113,113,.08)",
-    border: "1px solid rgba(248,113,113,.2)",
-    borderRadius: 8,
-    padding: "10px 14px",
-    margin: "0 20px 8px",
-  },
-  inpRow: {
-    display: "flex",
-    gap: 10,
-    padding: "14px 16px",
-    background: "#13161d",
-    borderTop: "1px solid #252934",
-    flexShrink: 0,
-  },
-  ta: {
-    flex: 1,
-    background: "#1a1d26",
-    border: "1px solid #252934",
-    borderRadius: 8,
-    padding: "10px 14px",
-    color: "#e2e8f0",
-    fontFamily: "'Syne', sans-serif",
-    fontSize: 13.5,
-    resize: "none" as const,
-    outline: "none",
-    lineHeight: 1.5,
-    minHeight: 42,
-  },
-  hint: {
-    fontFamily: "monospace",
-    fontSize: 10,
-    color: "#64748b",
-    padding: "0 16px 10px",
-    textAlign: "right" as const,
-  },
-};
+function ThinkingDots() {
+  return (
+    <div className="flex items-center gap-2 px-1">
+      <Spinner size="sm" color="current" />
+      <span className="text-sm text-default-500 font-medium animate-pulse">Connecting to agent…</span>
+    </div>
+  );
+}
 
-// Dynamic styles — these depend on props so remain as functions
-const D = {
-  dot: (on: boolean): React.CSSProperties => ({
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    flexShrink: 0,
-    background: on ? "#6ee7b7" : "#64748b",
-    boxShadow: on ? "0 0 8px #6ee7b7" : "none",
-  }),
-  row: (role: "user" | "agent"): React.CSSProperties => ({
-    display: "flex",
-    gap: 12,
-    flexDirection: role === "user" ? "row-reverse" : "row",
-  }),
-  av: (role: "user" | "agent"): React.CSSProperties => ({
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 600,
-    fontFamily: "monospace",
-    background: role === "user" ? "#1e2235" : "#2d5c4a",
-    border: `1px solid ${role === "user" ? "#3d4257" : "#2d5c4a"}`,
-    color: "#6ee7b7",
-  }),
-  bwrap: (role: "user" | "agent"): React.CSSProperties => ({
-    display: "flex",
-    flexDirection: "column",
-    maxWidth: "75%",
-    alignItems: role === "user" ? "flex-end" : "flex-start",
-  }),
-  bub: (role: "user" | "agent"): React.CSSProperties => ({
-    padding: "10px 14px",
-    borderRadius: 10,
-    borderTopRightRadius: role === "user" ? 3 : 10,
-    borderTopLeftRadius: role === "agent" ? 3 : 10,
-    fontSize: 13.5,
-    lineHeight: 1.65,
-    whiteSpace: "pre-wrap" as const,
-    wordBreak: "break-word" as const,
-    background: role === "user" ? "#1e2235" : "#13161d",
-    border: `1px solid ${role === "user" ? "#3d4257" : "#252934"}`,
-    color: "#e2e8f0",
-  }),
-  btn: (disabled: boolean): React.CSSProperties => ({
-    width: 42,
-    height: 42,
-    background: "#6ee7b7",
-    border: "none",
-    borderRadius: 8,
-    cursor: disabled ? "not-allowed" : "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    opacity: disabled ? 0.35 : 1,
-    alignSelf: "flex-end",
-  }),
-  ts: {
-    fontFamily: "monospace",
-    fontSize: 10,
-    color: "#64748b",
-    marginTop: 4,
-    padding: "0 2px",
-  } as React.CSSProperties,
-};
+const fmt = (d: Date) =>
+  d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 // ---------------------------------------------------------------------------
 // Component
@@ -204,7 +49,7 @@ const D = {
 type AgentStatus = "connecting" | "ready" | "error";
 
 export default function A2AChat({
-  placeholder = "Send a message…",
+  placeholder = "Ask anything…",
   className,
 }: {
   placeholder?: string;
@@ -213,14 +58,18 @@ export default function A2AChat({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingState, setLoadingState] = useState<"idle" | "connecting" | "streaming">("idle");
   const [error, setError] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentDesc, setAgentDesc] = useState<string>("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus>("connecting");
   const [contextId] = useState(() => crypto.randomUUID());
   const [streamingId, setStreamingId] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch agent card on mount
   useEffect(() => {
@@ -240,7 +89,16 @@ export default function A2AChat({
   // Auto-scroll to latest message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loadingState]);
+
+  const copyMessage = useCallback(async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessageId(id);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch { /* ignore */ }
+  }, []);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -266,11 +124,16 @@ export default function A2AChat({
 
     setMessages((prev) => [...prev, userMsg, agentMsg]);
     setLoading(true);
+    setLoadingState("connecting");
     setStreamingId(agentId);
 
     try {
+      let isFirstChunk = true;
       for await (const chunk of streamMessage(text, contextId)) {
-        // Only append non-empty chunks to avoid cursor flicker
+        if (isFirstChunk) {
+          setLoadingState("streaming");
+          isFirstChunk = false;
+        }
         if (chunk) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -282,10 +145,10 @@ export default function A2AChat({
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       setError(msg);
-      // Remove the empty agent placeholder on failure
       setMessages((prev) => prev.filter((m) => m.id !== agentId));
     } finally {
       setLoading(false);
+      setLoadingState("idle");
       setStreamingId(null);
     }
   }, [input, loading, contextId]);
@@ -297,93 +160,133 @@ export default function A2AChat({
     }
   };
 
-  const fmt = (d: Date) =>
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
   const canSend = !!input.trim() && !loading;
 
   return (
-    <>
+    <div className={clsx(
+      "flex flex-col h-full min-h-[520px] bg-[var(--background)] rounded-2xl border border-divider overflow-hidden shadow-sm",
+      className
+    )}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700&display=swap');
-        .a2a-ta:focus { border-color: #3d4257 !important; }
-        .a2a-ta::placeholder { color: #64748b; }
         .a2a-streaming::after {
           content: '▋';
-          color: #6ee7b7;
+          color: var(--accent);
           animation: a2a-blink .8s step-end infinite;
         }
         @keyframes a2a-blink { 50% { opacity: 0; } }
-        .a2a-msg { animation: a2a-in .2s ease; }
-        @keyframes a2a-in {
-          from { opacity: 0; transform: translateY(4px); }
-          to   { opacity: 1; transform: none; }
-        }
       `}</style>
 
-      <div style={S.root} className={className}>
-        {/* Header */}
-        <div style={S.hdr}>
-          <span style={D.dot(agentStatus === "ready")} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={S.hdrName}>{agentName ?? "Agent"}</div>
-            <div style={S.hdrDesc}>
-              {agentStatus === "connecting"
-                ? "Connecting…"
-                : agentStatus === "error"
-                  ? "Connection failed"
-                  : agentDesc}
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-divider bg-[var(--surface)]/50 backdrop-blur-md sticky top-0 z-10">
+        <div className={clsx(
+          "w-2 h-2 rounded-full",
+          agentStatus === "ready" ? "bg-success shadow-[0_0_8px_var(--heroui-success)]" : "bg-default-400"
+        )} />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold tracking-tight text-foreground line-clamp-1">
+            {agentName ?? "Agent"}
+          </div>
+          <div className="text-[11px] text-muted-foreground font-mono line-clamp-1 opacity-70">
+            {agentStatus === "connecting" ? "Connecting…" : agentStatus === "error" ? "Connection failed" : agentDesc}
+          </div>
+        </div>
+        <div className="px-2 py-0.5 rounded-lg bg-default-100 text-[10px] font-mono font-bold text-default-600 border border-divider">
+          A2A
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-8 space-y-8 scrollbar-hide">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20 animate-in fade-in zoom-in duration-500">
+            <div className="text-5xl opacity-20">⬡</div>
+            <div className="flex flex-col gap-1">
+               <h3 className="text-lg font-semibold text-foreground">Welcome to A2A</h3>
+               <p className="text-sm text-muted-foreground max-w-[240px]">
+                 {agentStatus === "ready" ? `Ask ${agentName} anything about their capabilities.` : "Connecting to remote agent…"}
+               </p>
             </div>
           </div>
-          <span style={S.badge}>A2A</span>
-        </div>
+        )}
 
-        {/* Messages */}
-        <div style={S.msgs}>
-          {messages.length === 0 && (
-            <div style={S.empty}>
-              <span style={{ fontSize: 28, opacity: 0.35 }}>⬡</span>
-              <span>
-                {agentStatus === "ready"
-                  ? `Connected to ${agentName}`
-                  : agentStatus === "error"
-                    ? "Could not reach agent — check your connection"
-                    : "Connecting to agent…"}
-              </span>
-            </div>
-          )}
+        {messages.map((m) => {
+          const isAgent = m.role === "agent";
+          const isStreaming = m.id === streamingId;
+          const showThinking = isAgent && isStreaming && loadingState === "connecting";
+          const copied = copiedMessageId === m.id;
 
-          {messages.map((m) => (
-            <div key={m.id} className="a2a-msg" style={D.row(m.role)}>
-              <div style={D.av(m.role)}>{m.role === "user" ? "U" : "A"}</div>
-              <div style={D.bwrap(m.role)}>
-                <div
-                  style={D.bub(m.role)}
-                  className={m.id === streamingId ? "a2a-streaming" : ""}
-                >
-                  {/* Show placeholder dots only while awaiting first chunk */}
-                  {m.text || (m.id === streamingId ? "" : "…")}
+          return (
+            <div key={m.id} className={clsx(
+              "group flex flex-col gap-2 transition-all duration-300",
+              isAgent ? "items-start" : "items-end"
+            )}>
+              <div className="flex items-end gap-2 max-w-[85%] group">
+                <div className={clsx(
+                  "relative px-4 py-3 rounded-2xl text-[14.5px] leading-relaxed shadow-sm transition-shadow group-hover:shadow-md",
+                  isAgent 
+                    ? "bg-[var(--surface)] border border-divider text-foreground rounded-bl-none" 
+                    : "bg-[var(--accent)] text-[var(--accent-foreground)] rounded-br-none"
+                )}>
+                  <div className={clsx(
+                    "whitespace-pre-wrap word-break-break-word",
+                    isStreaming && loadingState === "streaming" && "a2a-streaming"
+                  )}>
+                    {showThinking ? <ThinkingDots /> : (m.text || "…")}
+                  </div>
                 </div>
-                <div style={D.ts}>{fmt(m.timestamp)}</div>
+
+                {/* Message Actions */}
+                <div className={clsx(
+                  "flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                  isAgent ? "order-last ml-1" : "order-first mr-1"
+                )}>
+                  <Tooltip>
+                    <Tooltip.Trigger aria-label={copied ? "Copied" : "Copy"}>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="tertiary"
+                        onPress={() => copyMessage(m.id, m.text)}
+                        className="text-muted-foreground hover:bg-default-100 rounded-full h-8 w-8"
+                      >
+                        {copied ? <IconCheck className="w-3.5 h-3.5" /> : <IconCopy className="w-3.5 h-3.5" />}
+                      </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      {copied ? "Copied" : "Copy"}
+                    </Tooltip.Content>
+                  </Tooltip>
+                </div>
+              </div>
+              <div className={clsx(
+                "text-[10px] font-mono text-muted-foreground opacity-50 px-1",
+                !isAgent && "text-right"
+              )}>
+                {fmt(m.timestamp)}
               </div>
             </div>
-          ))}
-          <div ref={bottomRef} />
+          );
+        })}
+        <div ref={bottomRef} className="h-4" />
+      </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="mx-4 mb-4 px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger font-medium flex items-center gap-2 animate-in slide-in-from-top-2">
+          <span className="text-base">⚠</span>
+          <span>{error}</span>
         </div>
+      )}
 
-        {/* Error banner */}
-        {error && <div style={S.err}>⚠ {error}</div>}
-
-        {/* Input row */}
-        <div style={S.inpRow}>
+      {/* Input row */}
+      <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="flex flex-col gap-2 p-2.5 bg-[var(--surface)] border border-divider rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] focus-within:border-default-400 focus-within:shadow-md transition-all duration-200">
           <textarea
             ref={taRef}
-            className="a2a-ta"
-            style={S.ta}
+            rows={1}
             value={input}
             placeholder={placeholder}
             disabled={loading}
-            rows={1}
             onChange={(e) => {
               const el = e.target;
               el.style.height = "auto";
@@ -391,30 +294,55 @@ export default function A2AChat({
               setInput(el.value);
             }}
             onKeyDown={handleKey}
+            className="w-full bg-transparent px-3 py-1.5 text-[14.5px] text-foreground placeholder:text-muted-foreground focus:outline-none resize-none min-h-[38px] max-h-40 leading-relaxed font-medium"
           />
-          <button
-            style={D.btn(!canSend)}
-            disabled={!canSend}
-            onClick={handleSend}
-            aria-label="Send message"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#0d0f14"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-0.5">
+               <Tooltip>
+                  <Tooltip.Trigger aria-label="Add tools">
+                     <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
+                        <IconPlus className="w-4.5 h-4.5" />
+                     </Button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>Add tools</Tooltip.Content>
+               </Tooltip>
+               <Tooltip>
+                  <Tooltip.Trigger aria-label="Voice input">
+                     <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
+                        <IconMic className="w-4.5 h-4.5" />
+                     </Button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>Voice input</Tooltip.Content>
+               </Tooltip>
+            </div>
+            <div className="flex items-center gap-2">
+              {loading && (
+                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest animate-pulse mr-2">
+                  Processing…
+                </span>
+              )}
+              <Button
+                isIconOnly
+                size="sm"
+                isDisabled={!canSend}
+                onPress={handleSend}
+                className={clsx(
+                  "rounded-full h-8 w-8 transition-all duration-200",
+                  canSend 
+                    ? "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm hover:shadow-lg hover:scale-105 active:scale-95" 
+                    : "bg-default-100 text-default-400"
+                )}
+                aria-label="Send message"
+              >
+                <IconSend className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <div style={S.hint}>↵ Send · ⇧↵ New line</div>
+        <div className="mt-2.5 text-[10px] text-muted-foreground/40 text-center font-mono uppercase tracking-[0.1em]">
+           ↵ Send · ⇧↵ New line
+        </div>
       </div>
-    </>
+    </div>
   );
 }

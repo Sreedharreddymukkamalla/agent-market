@@ -94,6 +94,26 @@ export default function LoginClient() {
     }
   };
 
+  const signInAsGuest = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: guestError } = await supabase.auth.signInAnonymously();
+
+      if (guestError) {
+        setError(guestError.message);
+        return;
+      }
+
+      router.push("/dashboard/agent-aim?aimFresh=1");
+      router.refresh();
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-6">
       <Card className="w-full max-w-md p-8 shadow-2xl backdrop-blur-md bg-background/60">
@@ -176,6 +196,19 @@ export default function LoginClient() {
                 <path d="M21.35 11.1h-9.18v2.92h5.26c-.23 1.4-1.44 3.6-5.26 3.6-3.16 0-5.74-2.6-5.74-5.8s2.58-5.8 5.74-5.8c1.8 0 3.02.76 3.72 1.42l2.54-2.44C17.77 3.3 15.77 2.2 12.9 2.2 7.79 2.2 3.8 6.18 3.8 11.3s3.99 9.1 9.1 9.1c5.25 0 8.73-3.68 8.73-8.87 0-.6-.07-1.05-.38-1.43z" fill="currentColor"/>
               </svg>
               Continue with Google
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full flex items-center justify-center gap-3"
+              onClick={signInAsGuest}
+              isPending={loading}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+              Continue as Guest
             </Button>
 
             <button
