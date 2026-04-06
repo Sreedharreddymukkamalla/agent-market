@@ -1,10 +1,10 @@
 "use client";
 
-import { Card, Button, Chip, Spinner } from "@heroui/react";
 import React, { useEffect, useState } from "react";
-import { PlusIcon } from "@/components/icons";
-import { AgentTemplate } from "@/types/agent";
+import { Card, Button, Chip, Spinner } from "@heroui/react";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import { PlusIcon } from "@/components/icons";
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 const steps = ["Configure", "Add MCPs", "Deploy"];
@@ -20,11 +20,11 @@ function StepBar({ current }: { current: number }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${done
-                                  ? "bg-primary text-primary-foreground"
-                                  : active
-                                    ? "bg-primary/20 border-2 border-primary text-primary"
-                                    : "bg-default-100 text-default-400"
-                                  }`}
+                  ? "bg-primary text-primary-foreground"
+                  : active
+                    ? "bg-primary/20 border-2 border-primary text-primary"
+                    : "bg-default-100 text-default-400"
+                  }`}
               >
                 {done ? "✓" : i + 1}
               </div>
@@ -87,11 +87,12 @@ function StatusLog({ items }: { items: LogItem[] }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function MarketplacePage() {
-  const [templates, setTemplates] = useState<AgentTemplate[]>([]);
+  const router = useRouter();
+  const [marketAgents, setMarketAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [presets, setPresets] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [prefillTemplate, setPrefillTemplate] = useState<AgentTemplate | null>(null);
+  const [prefillAgent, setPrefillAgent] = useState<any | null>(null);
 
   // Wizard state
   const [step, setStep] = useState(0);
@@ -110,12 +111,21 @@ export default function MarketplacePage() {
 
   // Deploy-template button state
   const [deploying, setDeploying] = useState<string | null>(null);
+  const [addingToMyAgents, setAddingToMyAgents] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
-    fetchTemplates();
-    fetchPresets();
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchMarketAgents(),
+        fetchPresets()
+      ]);
+      setLoading(false);
+    };
+    init();
   }, []);
 
   const fetchPresets = async () => {
@@ -128,25 +138,56 @@ export default function MarketplacePage() {
     }
   };
 
-  const fetchTemplates = async () => {
+  const fetchMarketAgents = async () => {
     try {
-      const { data, error } = await supabase.from("adk_agent_templates").select("*");
+      const { data, error } = await supabase.from("agent_market").select("*");
       if (error) throw error;
-      setTemplates(data || []);
+      setMarketAgents(data || []);
     } catch (error) {
-      console.error("Failed to fetch templates:", error);
+      console.error("Failed to fetch market agents:", error);
+    }
+  };
+
+  const handleAddToMyAgents = async (agent: any) => {
+    setAddingToMyAgents(agent.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { error } = await supabase.from("adk_agents").insert({
+        user_id: user.id,
+        name: agent.name,
+        description: agent.description,
+        instructions: agent.instructions,
+        mcp_sse_endpoints: agent.mcp_sse_endpoints,
+        github_repo: agent.github_repo,
+        cloud_run_url: agent.cloud_run_url,
+        github_username: agent.github_username,
+        status: "active",
+      });
+
+      if (error) throw error;
+
+      setJustAdded(agent.id);
+      setTimeout(() => setJustAdded(null), 3000);
+    } catch (error) {
+      console.error("Failed to add agent to collection:", error);
+      alert("Failed to add agent. Please try again.");
     } finally {
-      setLoading(false);
+      setAddingToMyAgents(null);
     }
   };
 
   // ── Open wizard (optionally pre-filled from a template) ───────────────────
-  const openWizard = (template?: AgentTemplate) => {
-    setPrefillTemplate(template || null);
-    setCustomName(template?.name ?? "");
-    setCustomDescription(template?.description ?? "");
-    setCustomInstructions(template?.instructions ?? "");
-    setSelectedEndpoints(template?.mcp_sse_endpoints ?? []);
+  const openWizard = (agent?: any) => {
+    setPrefillAgent(agent || null);
+    setCustomName(agent?.name ?? "");
+    setCustomDescription(agent?.description ?? "");
+    setCustomInstructions(agent?.instructions ?? "");
+    setSelectedEndpoints(agent?.mcp_sse_endpoints ?? []);
     setGithubPat("");
     setStep(0);
     setBuildLog([]);
@@ -158,41 +199,6 @@ export default function MarketplacePage() {
   const closeWizard = () => {
     if (building) return;
     setIsModalOpen(false);
-  };
-
-  // ── "Deploy Template" quick-save (stores to DB only, no fork) ────────────
-  const handleDeploy = async (template: AgentTemplate) => {
-    setDeploying(template.id);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        alert("Please log in to deploy agents.");
-        return;
-      }
-
-      const { error: upsertError } = await supabase
-        .from("adk_agents")
-        .upsert(
-          {
-            user_id: user.id,
-            name: template.name,
-            instructions: template.instructions,
-            mcp_sse_endpoints: template.mcp_sse_endpoints,
-            status: "inactive",
-          },
-          { onConflict: "name" }
-        );
-
-      if (upsertError) throw upsertError;
-      alert(`Successfully saved ${template.name}!`);
-    } catch (error: any) {
-      console.error("Deployment error:", error);
-      alert(error.message || "An unexpected error occurred.");
-    } finally {
-      setDeploying(null);
-    }
   };
 
   // ── Build Agent (fork → patch → push) ────────────────────────────────────
@@ -241,7 +247,6 @@ export default function MarketplacePage() {
     }
 
     try {
-      // Step 1 running → Step 2 running
       await new Promise((r) => setTimeout(r, 500));
 
       const response = await fetch('/api/agent-market/build', {
@@ -325,57 +330,61 @@ export default function MarketplacePage() {
         </Button>
       </div>
 
-      {/* Template grid */}
-      {templates.length === 0 ? (
+      {/* Agent grid */}
+      {marketAgents.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border-2 border-dashed border-divider rounded-xl">
-          <p className="text-default-500">No templates found.</p>
+          <p className="text-default-500">No agents found. Build your first one!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-          {templates.map((template) => (
+          {marketAgents.map((agent) => (
             <Card
-              key={template.id}
-              className="bg-surface border border-divider p-6 transition-colors hover:bg-surface-secondary flex flex-col justify-between text-left"
+              key={agent.id}
+              className="bg-surface/50 border border-primary/20 p-4 transition-colors hover:bg-surface-secondary flex flex-col gap-3 text-left"
             >
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <Chip size="sm" variant="soft" color="default" className="font-medium">
-                    {template.category}
-                  </Chip>
-                  <div className="flex items-center gap-1 text-xs text-default-400">
-                    <span>⭐ {template.stars}</span>
-                  </div>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h3 className="text-lg font-bold text-default-900 truncate pr-2">{agent.name}</h3>
+                  <p className="text-default-500 text-xs line-clamp-1 mt-0.5">
+                    {agent.description}
+                  </p>
                 </div>
-
-                <h3 className="text-xl font-bold text-default-900 mb-2">{template.name}</h3>
-                <p className="text-default-500 text-sm mb-6 pb-4 border-b border-divider">
-                  {template.description}
-                </p>
+                <div className="flex items-center gap-1 text-[10px] text-default-400 mt-1 whitespace-nowrap bg-default-100/50 px-2 py-0.5 rounded-full">
+                  <span className="text-primary text-[8px]">●</span>
+                  <span>Active</span>
+                </div>
               </div>
 
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-lg font-bold text-default-900">
-                  {template.price === 0 ? "Free" : `$${template.price}/mo`}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="font-medium h-9 px-4 hover:bg-default-100 transition-colors"
-                    isDisabled={deploying !== null}
-                    onClick={() => handleDeploy(template)}
-                  >
-                    {deploying === template.id ? <Spinner size="sm" color="current" /> : "Quick Save"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    className="font-bold h-9 px-4 shadow-sm hover:shadow-md hover:shadow-primary/10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                    onClick={() => openWizard(template)}
-                  >
-                    Build Agent
-                  </Button>
-                </div>
+              <div className="flex justify-between items-center pt-2 border-t border-divider/50">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="font-medium h-9 px-4 hover:bg-default-100 transition-colors"
+                  onClick={() => {
+                    if (agent.cloud_run_url) window.open(agent.cloud_run_url, "_blank");
+                  }}
+                >
+                  View Agent
+                </Button>
+                <Button
+                  size="sm"
+                  variant={justAdded === agent.id ? "ghost" : "primary"}
+                  className={`font-bold h-9 px-4 shadow-sm transition-all duration-200 ${
+                    justAdded === agent.id 
+                      ? "bg-success/20 text-success border-success/30 hover:bg-success/30" 
+                      : "hover:shadow-md hover:shadow-primary/10 hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
+                  isDisabled={addingToMyAgents === agent.id}
+                  onClick={() => handleAddToMyAgents(agent)}
+                >
+                  {addingToMyAgents === agent.id ? (
+                    <Spinner size="sm" color="current" />
+                  ) : justAdded === agent.id ? (
+                    "Added ✓"
+                  ) : (
+                    "Add to my Agents"
+                  )}
+                </Button>
               </div>
             </Card>
           ))}
@@ -395,7 +404,7 @@ export default function MarketplacePage() {
             <div className="flex items-center justify-between p-6 border-b border-divider">
               <div className="flex flex-col gap-1">
                 <h2 className="text-xl font-bold text-default-900">
-                  {prefillTemplate ? `Build: ${prefillTemplate.name}` : "Build Agent"}
+                  {prefillAgent ? `Build variant: ${prefillAgent.name}` : "Build Agent"}
                 </h2>
                 <p className="text-sm text-default-500">
                   Fork → Configure → Deploy to Cloud Run via GitHub Actions

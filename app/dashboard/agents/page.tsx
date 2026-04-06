@@ -4,6 +4,8 @@ import { Card, Button, Chip, Spinner } from "@heroui/react";
 import React, { useEffect, useState, useRef } from "react";
 import { UserAgent } from "@/types/agent";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
 
 // ADK /run returns Event[]. Extract the last model text response.
 function extractReply(events: any[]): string {
@@ -21,6 +23,8 @@ function extractReply(events: any[]): string {
 export default function AgentsPage() {
   const [agents, setAgents] = useState<(UserAgent & { checkingHealth?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
   const supabase = createClient();
 
   // Chat modal state
@@ -47,6 +51,7 @@ export default function AgentsPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      setUser(user);
       if (!user) {
         setLoading(false);
         return;
@@ -213,7 +218,35 @@ export default function AgentsPage() {
         </p>
       </div>
 
-      {agents.length === 0 ? (
+      {!user ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-divider rounded-2xl bg-background/40 backdrop-blur-md p-8 text-center gap-6">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-4xl mb-2">
+            🔒
+          </div>
+          <div className="flex flex-col gap-2 max-w-md">
+            <h2 className="text-2xl font-bold text-default-900">Authentication Required</h2>
+            <p className="text-default-500">
+              Please sign in or create an account to view and manage your personal AI agents.
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Button
+              variant="primary"
+              className="font-bold px-8 h-12 shadow-lg shadow-primary/20"
+              onClick={() => router.push("/login")}
+            >
+              Sign In
+            </Button>
+            <Button
+              variant="secondary"
+              className="font-bold px-8 h-12"
+              onClick={() => router.push("/login?mode=signup")}
+            >
+              Sign Up
+            </Button>
+          </div>
+        </div>
+      ) : agents.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border-2 border-dashed border-divider rounded-xl bg-background/40 backdrop-blur-md">
           <p className="text-default-500">No active agents found.</p>
         </div>

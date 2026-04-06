@@ -42,14 +42,20 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/auth") ||
-    request.nextUrl.pathname.startsWith("/verify");
+    request.nextUrl.pathname.startsWith("/verify") ||
+    request.nextUrl.pathname === "/dashboard/agent-aim" ||
+    request.nextUrl.pathname === "/dashboard/marketplace";
+
+  // REDIRECTS FOR ROOT ACCESSIBILITY
+  if (request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard/agent-aim";
+    return NextResponse.redirect(url);
+  }
 
   // REDIRECTS FOR AUTHENTICATED USERS
   if (user) {
-    if (
-      request.nextUrl.pathname === "/" ||
-      request.nextUrl.pathname.startsWith("/login")
-    ) {
+    if (request.nextUrl.pathname.startsWith("/login")) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard/agent-aim";
       return NextResponse.redirect(url);

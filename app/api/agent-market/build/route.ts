@@ -212,11 +212,11 @@ export async function POST(req: Request) {
     const cloudRunUrl = `https://${safeName}-475756125529.us-central1.run.app`;
 
     const { error: upsertError } = await supabase
-      .from("adk_agents")
+      .from("agent_market")
       .upsert(
         {
-          user_id: user.id,
           name,
+          description: description || `My custom ${name} agent`,
           instructions,
           mcp_sse_endpoints: mcpUrlsArray,
           github_repo: githubRepoUrl,

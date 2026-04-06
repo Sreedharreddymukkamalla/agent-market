@@ -66,7 +66,7 @@ export default function A2AChat({
   const [contextId] = useState(() => crypto.randomUUID());
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -201,10 +201,10 @@ export default function A2AChat({
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20 animate-in fade-in zoom-in duration-500">
             <div className="text-5xl opacity-20">⬡</div>
             <div className="flex flex-col gap-1">
-               <h3 className="text-lg font-semibold text-foreground">Welcome to A2A</h3>
-               <p className="text-sm text-muted-foreground max-w-[240px]">
-                 {agentStatus === "ready" ? `Ask ${agentName} anything about their capabilities.` : "Connecting to remote agent…"}
-               </p>
+              <h3 className="text-lg font-semibold text-foreground">Welcome to A2A</h3>
+              <p className="text-sm text-muted-foreground max-w-[240px]">
+                {agentStatus === "ready" ? `Ask ${agentName} anything about their capabilities.` : "Connecting to remote agent…"}
+              </p>
             </div>
           </div>
         )}
@@ -223,15 +223,39 @@ export default function A2AChat({
               <div className="flex items-end gap-2 max-w-[85%] group">
                 <div className={clsx(
                   "relative px-4 py-3 rounded-2xl text-[14.5px] leading-relaxed shadow-sm transition-shadow group-hover:shadow-md",
-                  isAgent 
-                    ? "bg-[var(--surface)] border border-divider text-foreground rounded-bl-none" 
+                  isAgent
+                    ? "bg-[var(--surface)] border border-divider text-foreground rounded-bl-none"
                     : "bg-[var(--accent)] text-[var(--accent-foreground)] rounded-br-none"
                 )}>
                   <div className={clsx(
                     "whitespace-pre-wrap word-break-break-word",
                     isStreaming && loadingState === "streaming" && "a2a-streaming"
                   )}>
-                    {showThinking ? <ThinkingDots /> : (m.text || "…")}
+                    {showThinking ? (
+                      <ThinkingDots />
+                    ) : (
+                      <>
+                        {/* 1. Render the text content */}
+                        <div className="mb-2">{m.text || "…"}</div>
+
+                        {/* 2. Check for GCS Image URLs and render them */}
+                        {m.text?.includes("storage.googleapis.com") &&
+                          m.text.match(/https:\/\/storage\.googleapis\.com\/[^\s)]+/g)?.map((url, idx) => (
+                            <div key={idx} className="mt-3 overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5">
+                              <img
+                                src={url}
+                                alt="Generated Anime"
+                                className="max-w-full h-auto object-contain block hover:scale-[1.02] transition-transform duration-300"
+                                loading="lazy"
+                                onError={(e) => {
+                                  // Hide if blocked by CORS or permissions
+                                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          ))}
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -298,22 +322,22 @@ export default function A2AChat({
           />
           <div className="flex items-center justify-between">
             <div className="flex gap-0.5">
-               <Tooltip>
-                  <Tooltip.Trigger aria-label="Add tools">
-                     <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
-                        <IconPlus className="w-4.5 h-4.5" />
-                     </Button>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>Add tools</Tooltip.Content>
-               </Tooltip>
-               <Tooltip>
-                  <Tooltip.Trigger aria-label="Voice input">
-                     <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
-                        <IconMic className="w-4.5 h-4.5" />
-                     </Button>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>Voice input</Tooltip.Content>
-               </Tooltip>
+              <Tooltip>
+                <Tooltip.Trigger aria-label="Add tools">
+                  <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
+                    <IconPlus className="w-4.5 h-4.5" />
+                  </Button>
+                </Tooltip.Trigger>
+                <Tooltip.Content>Add tools</Tooltip.Content>
+              </Tooltip>
+              <Tooltip>
+                <Tooltip.Trigger aria-label="Voice input">
+                  <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
+                    <IconMic className="w-4.5 h-4.5" />
+                  </Button>
+                </Tooltip.Trigger>
+                <Tooltip.Content>Voice input</Tooltip.Content>
+              </Tooltip>
             </div>
             <div className="flex items-center gap-2">
               {loading && (
@@ -328,8 +352,8 @@ export default function A2AChat({
                 onPress={handleSend}
                 className={clsx(
                   "rounded-full h-8 w-8 transition-all duration-200",
-                  canSend 
-                    ? "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm hover:shadow-lg hover:scale-105 active:scale-95" 
+                  canSend
+                    ? "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm hover:shadow-lg hover:scale-105 active:scale-95"
                     : "bg-default-100 text-default-400"
                 )}
                 aria-label="Send message"
@@ -340,7 +364,7 @@ export default function A2AChat({
           </div>
         </div>
         <div className="mt-2.5 text-[10px] text-muted-foreground/40 text-center font-mono uppercase tracking-[0.1em]">
-           ↵ Send · ⇧↵ New line
+          ↵ Send · ⇧↵ New line
         </div>
       </div>
     </div>

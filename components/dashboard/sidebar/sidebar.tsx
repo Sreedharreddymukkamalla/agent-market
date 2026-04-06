@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { Sidebar } from "./sidebar.styles";
-import { Dropdown, Separator } from "@heroui/react";
+import { Button, Dropdown, Separator } from "@heroui/react";
 import { BurguerButton } from "../navbar/burguer-button";
 import {
   AgentsIcon,
@@ -95,6 +95,7 @@ export const SidebarWrapper = () => {
   const isRail = isMdUp && !sidebarOpen;
   const mobileDrawerOpen = !isMdUp && sidebarOpen;
   const [user, setUser] = useState<User | null>(null);
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
   const supabase = createClient();
   const isLight = resolvedTheme === "light";
 
@@ -103,6 +104,12 @@ export const SidebarWrapper = () => {
   }, []);
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
     const load = async () => {
       const {
         data: { user: u },
@@ -110,6 +117,10 @@ export const SidebarWrapper = () => {
       setUser(u);
     };
     void load();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   const handleLogout = useCallback(async () => {
@@ -117,18 +128,20 @@ export const SidebarWrapper = () => {
     router.replace("/login");
   }, [router, supabase]);
 
+  const isGuest = user?.is_anonymous;
   const meta = user?.user_metadata as Record<string, string> | undefined;
-  const displayName =
-    meta?.full_name ||
-    meta?.name ||
-    user?.email?.split("@")[0] ||
-    "Account";
+  const displayName = isGuest
+    ? "Guest"
+    : meta?.full_name ||
+      meta?.name ||
+      user?.email?.split("@")[0] ||
+      "Account";
   const initials = getInitials(displayName, user?.email ?? "");
   const avatarUrl = meta?.avatar_url as string | undefined;
   const planRaw =
     (meta?.plan as string | undefined) ??
     (meta?.subscription_tier as string | undefined) ??
-    "Free";
+    (isGuest ? "Guest Access" : "Free Plan");
   const planLabel = planRaw
     ? `${planRaw.charAt(0).toUpperCase()}${planRaw.slice(1)}`
     : "Free";
@@ -243,160 +256,226 @@ export const SidebarWrapper = () => {
           </div>
 
           <div className={Sidebar.Footer({ rail: isRail })}>
-            <Dropdown>
-              <Dropdown.Trigger
-                aria-label="Account menu"
-                className={clsx(
-                  "flex outline-none transition-[background-color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-focus",
-                  isRail
-                    ? "size-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 hover:bg-[var(--sidebar-item-hover)]"
-                    : "w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)]/60 bg-[var(--sidebar-profile-chip)] px-2.5 py-2.5 text-left shadow-[0_1px_2px_oklch(0%_0_0_/0.04)] hover:bg-[var(--sidebar-profile-chip-hover)] dark:border-white/[0.08]",
-                )}
-              >
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt=""
-                    className="size-9 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className={clsx(
-                      "flex shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-user-avatar-bg)] font-semibold text-[var(--sidebar-user-avatar-fg)]",
-                      isRail ? "size-9 text-xs" : "size-9 text-[12px]",
-                    )}
-                  >
-                    {initials}
-                  </div>
-                )}
-                {!isRail && (
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="truncate text-sm font-semibold leading-tight text-default-900">
-                      {displayName}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs leading-tight text-default-500">
-                      {planLabel}
-                    </p>
-                  </div>
-                )}
-              </Dropdown.Trigger>
-              <Dropdown.Popover
-                placement="top start"
-                offset={8}
-                className="rounded-2xl border border-divider bg-overlay p-0 shadow-[var(--overlay-shadow)]"
-              >
-                <Dropdown.Menu
-                  aria-label="Account"
-                  className="min-w-[220px] gap-0 rounded-2xl p-1.5"
+            {user ? (
+              <Dropdown>
+                <Dropdown.Trigger
+                  aria-label="Account menu"
+                  className={clsx(
+                    "flex outline-none transition-[background-color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-focus",
+                    isRail
+                      ? "size-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 hover:bg-[var(--sidebar-item-hover)]"
+                      : "w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)]/60 bg-[var(--sidebar-profile-chip)] px-2.5 py-2.5 text-left shadow-[0_1px_2px_oklch(0%_0_0_/0.04)] hover:bg-[var(--sidebar-profile-chip-hover)] dark:border-white/[0.08]",
+                  )}
                 >
-                  <Dropdown.Item
-                    key="settings"
-                    className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                    onPress={() => {
-                      router.push("/dashboard/settings");
-                      closeMobileSidebar();
-                    }}
-                  >
-                    <span className="flex items-center gap-3">
-                      <SettingsIcon
-                        size={18}
-                        className="shrink-0 text-default-600"
-                      />
-                      <span className="text-sm font-medium text-default-900">
-                        My Settings
-                      </span>
-                    </span>
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    key="billing"
-                    className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                    onPress={() => {
-                      router.push("/dashboard/billing");
-                      closeMobileSidebar();
-                    }}
-                  >
-                    <span className="flex items-center gap-3">
-                      <BillingIcon
-                        size={18}
-                        className="shrink-0 text-default-600"
-                      />
-                      <span className="text-sm font-medium text-default-900">
-                        Billing Info
-                      </span>
-                    </span>
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    key="help"
-                    className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                    onPress={() => {
-                      router.push("/dashboard/help-feedback");
-                      closeMobileSidebar();
-                    }}
-                  >
-                    <span className="flex items-center gap-3">
-                      <HelpCircleIcon className="shrink-0 text-default-600" />
-                      <span className="text-sm font-medium text-default-900">
-                        Help &amp; Feedback
-                      </span>
-                    </span>
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    key="theme"
-                    className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                    textValue={
-                      themeMounted
-                        ? isLight
-                          ? "Switch to dark mode"
-                          : "Switch to light mode"
-                        : "Appearance"
-                    }
-                    onPress={() => {
-                      setTheme(isLight ? "dark" : "light");
-                      closeMobileSidebar();
-                    }}
-                  >
-                    <span className="flex items-center gap-3">
-                      {themeMounted ? (
-                        isLight ? (
-                          <MoonFilledIcon
-                            size={18}
-                            className="shrink-0 text-default-600"
-                          />
-                        ) : (
-                          <SunFilledIcon
-                            size={18}
-                            className="shrink-0 text-default-600"
-                          />
-                        )
-                      ) : (
-                        <span
-                          className="size-[18px] shrink-0"
-                          aria-hidden
-                        />
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      className="size-9 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className={clsx(
+                        "flex shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-user-avatar-bg)] font-semibold text-[var(--sidebar-user-avatar-fg)]",
+                        isRail ? "size-9 text-xs" : "size-9 text-[12px]",
                       )}
-                      <span className="text-sm font-medium text-default-900">
-                        {themeMounted
-                          ? isLight
-                            ? "Dark mode"
-                            : "Light mode"
-                          : "Appearance"}
-                      </span>
-                    </span>
-                  </Dropdown.Item>
-                  <Separator className="my-1 h-px bg-divider" />
-                  <Dropdown.Item
-                    key="logout"
-                    className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 text-danger data-[hovered=true]:bg-danger/10"
-                    onPress={handleLogout}
+                    >
+                      {initials}
+                    </div>
+                  )}
+                  {!isRail && (
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-semibold leading-tight text-default-900">
+                        {displayName}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs leading-tight text-default-500">
+                        {planLabel}
+                      </p>
+                    </div>
+                  )}
+                </Dropdown.Trigger>
+                <Dropdown.Popover
+                  placement="top start"
+                  offset={8}
+                  className="rounded-2xl border border-divider bg-overlay p-0 shadow-[var(--overlay-shadow)]"
+                >
+                  <Dropdown.Menu
+                    aria-label="Account"
+                    className="min-w-[220px] gap-0 rounded-2xl p-1.5"
                   >
-                    <span className="flex items-center gap-3">
-                      <LogOutIcon className="shrink-0 text-danger" />
-                      <span className="text-sm font-medium">Sign out</span>
-                    </span>
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
+                    <Dropdown.Item
+                      key="settings"
+                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
+                      onPress={() => {
+                        router.push("/dashboard/settings");
+                        closeMobileSidebar();
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <SettingsIcon
+                          size={18}
+                          className="shrink-0 text-default-600"
+                        />
+                        <span className="text-sm font-medium text-default-900">
+                          My Settings
+                        </span>
+                      </span>
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      key="billing"
+                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
+                      onPress={() => {
+                        router.push("/dashboard/billing");
+                        closeMobileSidebar();
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <BillingIcon
+                          size={18}
+                          className="shrink-0 text-default-600"
+                        />
+                        <span className="text-sm font-medium text-default-900">
+                          Billing Info
+                        </span>
+                      </span>
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      key="help"
+                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
+                      onPress={() => {
+                        router.push("/dashboard/help-feedback");
+                        closeMobileSidebar();
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <HelpCircleIcon className="shrink-0 text-default-600" />
+                        <span className="text-sm font-medium text-default-900">
+                          Help &amp; Feedback
+                        </span>
+                      </span>
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      key="theme"
+                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
+                      textValue={
+                        themeMounted
+                          ? isLight
+                            ? "Switch to dark mode"
+                            : "Switch to light mode"
+                          : "Appearance"
+                      }
+                      onPress={() => {
+                        setTheme(isLight ? "dark" : "light");
+                        closeMobileSidebar();
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        {themeMounted ? (
+                          isLight ? (
+                            <MoonFilledIcon
+                              size={18}
+                              className="shrink-0 text-default-600"
+                            />
+                          ) : (
+                            <SunFilledIcon
+                              size={18}
+                              className="shrink-0 text-default-600"
+                            />
+                          )
+                        ) : (
+                          <span
+                            className="size-[18px] shrink-0"
+                            aria-hidden
+                          />
+                        )}
+                        <span className="text-sm font-medium text-default-900">
+                          {themeMounted
+                            ? isLight
+                              ? "Dark mode"
+                              : "Light mode"
+                            : "Appearance"}
+                        </span>
+                      </span>
+                    </Dropdown.Item>
+                    <Separator className="my-1 h-px bg-divider" />
+                    <Dropdown.Item
+                      key="logout"
+                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 text-danger data-[hovered=true]:bg-danger/10"
+                      onPress={handleLogout}
+                    >
+                      <span className="flex items-center gap-3">
+                        <LogOutIcon className="shrink-0 text-danger" />
+                        <span className="text-sm font-medium">Sign out</span>
+                      </span>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
+            ) : (
+              <div className={clsx("flex w-full gap-2", isRail && "flex-col items-center")}>
+                <Button
+                  variant="ghost"
+                  size={isRail ? "sm" : "md"}
+                  className={clsx(
+                    "flex-1 font-semibold",
+                    isRail ? "size-10 min-w-0 p-0" : "px-4"
+                  )}
+                  onPress={() => {
+                    router.push("/login");
+                    closeMobileSidebar();
+                  }}
+                >
+                  {isRail ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M13.8 12H3"/></svg>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+                <Button
+                  className={clsx(
+                    "flex-1 bg-primary text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all",
+                    isRail ? "size-10 min-w-0 p-0" : "px-4"
+                  )}
+                  size={isRail ? "sm" : "md"}
+                  isPending={isGuestLoading}
+                  onPress={async () => {
+                    setIsGuestLoading(true);
+                    try {
+                      const { error } = await supabase.auth.signInAnonymously();
+                      if (error) {
+                        alert(error.message);
+                        return;
+                      }
+                      router.push("/dashboard/agent-aim?aimFresh=1");
+                      router.refresh();
+                      closeMobileSidebar();
+                    } catch (e: any) {
+                      alert(e?.message || "Guest login failed");
+                    } finally {
+                      setIsGuestLoading(false);
+                    }
+                  }}
+                >
+                  {isRail ? (
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  ) : (
+                    "Guest"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
