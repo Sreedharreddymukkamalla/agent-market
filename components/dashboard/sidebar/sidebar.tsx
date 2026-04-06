@@ -133,9 +133,9 @@ export const SidebarWrapper = () => {
   const displayName = isGuest
     ? "Guest"
     : meta?.full_name ||
-      meta?.name ||
-      user?.email?.split("@")[0] ||
-      "Account";
+    meta?.name ||
+    user?.email?.split("@")[0] ||
+    "Account";
   const initials = getInitials(displayName, user?.email ?? "");
   const avatarUrl = meta?.avatar_url as string | undefined;
   const planRaw =
@@ -168,7 +168,7 @@ export const SidebarWrapper = () => {
             "grid min-h-0 shrink-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-[var(--sidebar-bg)]",
             isMdUp && "border-r border-divider",
             !isMdUp &&
-              "fixed left-0 top-12 z-[203] h-[calc(100dvh-3rem)] w-64 rounded-r-[2rem] border-r border-[var(--sidebar-border)] transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "fixed left-0 top-12 z-[203] h-[calc(100dvh-3rem)] w-64 rounded-r-[2rem] border-r border-[var(--sidebar-border)] transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
             !isMdUp &&
             (sidebarOpen
               ? "translate-x-0 px-2 pb-2 pt-3"
@@ -214,7 +214,7 @@ export const SidebarWrapper = () => {
                 isActive={pathname === "/dashboard/agents"}
                 title="My Agents"
                 icon={<AgentsIcon />}
-                href="/dashboard/agents"
+                href={(!user) ? "/login" : "/dashboard/agents"}
               />
               <SidebarItem
                 isActive={pathname === "/dashboard/marketplace"}
@@ -226,7 +226,7 @@ export const SidebarWrapper = () => {
                 isActive={pathname === "/dashboard/remote-agent"}
                 title="Remote Agent"
                 icon={<AgentsIcon />}
-                href="/dashboard/remote-agent"
+                href={(!user) ? "/login" : "/dashboard/remote-agent"}
               />
 
               <SidebarCollapse
@@ -237,19 +237,19 @@ export const SidebarWrapper = () => {
                   isActive={pathname === "/agent-market"}
                   title="Market"
                   icon={<MCPIcon size={18} />}
-                  href="/agent-market"
+                  href={(!user) ? "/login" : "/agent-market"}
                 />
                 <SidebarItem
                   isActive={pathname === "/dashboard/mcp-inspection"}
                   title="Inspector"
                   icon={<InspectIcon size={18} />}
-                  href="/dashboard/mcp-inspection"
+                  href={(!user) ? "/login" : "/dashboard/mcp-inspection"}
                 />
                 <SidebarItem
                   isActive={pathname === "/dashboard/mcp-scanner"}
                   title="Scanner"
                   icon={<ShieldIcon size={18} />}
-                  href="/dashboard/mcp-scanner"
+                  href={(!user) ? "/login" : "/dashboard/mcp-scanner"}
                 />
               </SidebarCollapse>
             </SidebarMenu>
@@ -426,7 +426,7 @@ export const SidebarWrapper = () => {
                   }}
                 >
                   {isRail ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M13.8 12H3"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M13.8 12H3" /></svg>
                   ) : (
                     "Sign In"
                   )}

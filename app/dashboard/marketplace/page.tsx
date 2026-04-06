@@ -169,13 +169,15 @@ export default function MarketplacePage() {
         status: "active",
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message);
+      }
 
       setJustAdded(agent.id);
       setTimeout(() => setJustAdded(null), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add agent to collection:", error);
-      alert("Failed to add agent. Please try again.");
+      alert(`Failed to add agent: ${error.message || "Unknown error"}`);
     } finally {
       setAddingToMyAgents(null);
     }
