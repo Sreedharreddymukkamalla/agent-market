@@ -441,9 +441,7 @@ export const SidebarWrapper = () => {
                         alert(error.message);
                         return;
                       }
-                      router.push("/dashboard/agent-aim?aimFresh=1");
-                      router.refresh();
-                      closeMobileSidebar();
+                      window.location.href = "/dashboard/agent-aim?aimFresh=1";
                     } catch (e: any) {
                       alert(e?.message || "Guest login failed");
                     } finally {

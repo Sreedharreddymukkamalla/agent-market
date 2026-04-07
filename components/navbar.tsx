@@ -87,16 +87,7 @@ export const Navbar = () => {
             </p>
           </NextLink>
           <ul className="hidden lg:flex gap-4 ml-2">
-            {user && (
-              <li>
-                <NextLink
-                  className="text-foreground hover:text-muted-foreground transition-colors font-medium"
-                  href="/dashboard/agent-aim"
-                >
-                  Dashboard
-                </NextLink>
-              </li>
-            )}
+
             {siteConfig.navItems
               .filter((item) => !(pathname?.startsWith("/login") && item.href === "/" || pathname?.startsWith("/signup") && item.href === "/"))
               .map((item) => (
@@ -206,17 +197,7 @@ export const Navbar = () => {
         <div className="border-t border-divider sm:hidden">
           <div className="p-4">{searchInput}</div>
           <ul className="flex flex-col gap-2 px-4 pb-4">
-            {user && (
-              <li>
-                <NextLink
-                  className="block py-2 text-lg no-underline text-foreground font-medium"
-                  href="/dashboard/agent-aim"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
-                </NextLink>
-              </li>
-            )}
+
             {siteConfig.navMenuItems.map((item, index) => (
               <li key={`${item.label}-${index}`}>
                 <Link

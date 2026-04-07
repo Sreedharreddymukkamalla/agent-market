@@ -105,8 +105,8 @@ export default function LoginClient() {
         return;
       }
 
-      router.push("/dashboard/agent-aim?aimFresh=1");
-      router.refresh();
+      // Use window.location.href to ensure a full page reload so session cookies are correctly picked up
+      window.location.href = "/dashboard/agent-aim?aimFresh=1";
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {

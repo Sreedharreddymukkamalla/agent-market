@@ -10,10 +10,7 @@ export const siteConfig = {
     },
   ],
   navMenuItems: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/agent-aim",
-    },
+
     {
       label: "Settings",
       href: "/settings",
