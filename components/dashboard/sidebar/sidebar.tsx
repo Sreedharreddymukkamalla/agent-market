@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { Sidebar } from "./sidebar.styles";
-import { Button, Dropdown, Separator } from "@heroui/react";
+import { Button, Dropdown } from "@heroui/react";
 import { BurguerButton } from "../navbar/burguer-button";
 import {
   AgentsIcon,
@@ -13,18 +13,16 @@ import {
   MCPIcon,
   AgentAimIcon,
   SettingsIcon,
-  BillingIcon,
 } from "../icons";
 import { SidebarItem } from "./sidebar-item";
 import { SidebarMenu } from "./sidebar-menu";
 import { useSidebarContext } from "../layout-context";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import NextLink from "next/link";
-import { MoonFilledIcon, SunFilledIcon } from "@/components/icons";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { SidebarCollapse } from "./sidebar-collapse";
+import { SettingsModal } from "./settings-modal";
 
 function LogOutIcon({ className }: { className?: string }) {
   return (
@@ -48,27 +46,7 @@ function LogOutIcon({ className }: { className?: string }) {
   );
 }
 
-function HelpCircleIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+
 
 function getInitials(name: string, email: string): string {
   const n = name.trim();
@@ -88,21 +66,13 @@ function getInitials(name: string, email: string): string {
 
 export const SidebarWrapper = () => {
   const pathname = usePathname();
-  const router = useRouter();
-  const { setTheme, resolvedTheme } = useTheme();
-  const [themeMounted, setThemeMounted] = useState(false);
-  const { sidebarOpen, closeSidebar, isMdUp } = useSidebarContext();
+  const router = useRouter();  const { sidebarOpen, closeSidebar, isMdUp } = useSidebarContext();
   const isRail = isMdUp && !sidebarOpen;
   const mobileDrawerOpen = !isMdUp && sidebarOpen;
   const [user, setUser] = useState<User | null>(null);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const supabase = createClient();
-  const isLight = resolvedTheme === "light";
-
-  useEffect(() => {
-    setThemeMounted(true);
-  }, []);
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -252,43 +222,50 @@ export const SidebarWrapper = () => {
 
           <div className={Sidebar.Footer({ rail: isRail })}>
             {user ? (
-              <Dropdown>
-                <Dropdown.Trigger
-                  aria-label="Account menu"
-                  className={clsx(
-                    "flex outline-none transition-[background-color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-focus",
-                    isRail
-                      ? "size-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 hover:bg-[var(--sidebar-item-hover)]"
-                      : "w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)]/60 bg-[var(--sidebar-profile-chip)] px-2.5 py-2.5 text-left shadow-[0_1px_2px_oklch(0%_0_0_/0.04)] hover:bg-[var(--sidebar-profile-chip-hover)] dark:border-white/[0.08]",
-                  )}
-                >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt=""
-                      className="size-9 shrink-0 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className={clsx(
-                        "flex shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-user-avatar-bg)] font-semibold text-[var(--sidebar-user-avatar-fg)]",
-                        isRail ? "size-9 text-xs" : "size-9 text-[12px]",
-                      )}
-                    >
-                      {initials}
-                    </div>
-                  )}
-                  {!isRail && (
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-sm font-semibold leading-tight text-default-900">
-                        {displayName}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs leading-tight text-default-500">
-                        {planLabel}
-                      </p>
-                    </div>
-                  )}
-                </Dropdown.Trigger>
+              <div className={clsx(
+                "w-full flex items-center gap-1",
+                !isRail && "rounded-2xl border border-[var(--border)]/60 bg-[var(--sidebar-profile-chip)] p-1.5 shadow-[0_1px_4px_oklch(0%_0_0_/0.05)] dark:border-white/[0.08]"
+              )}>
+                <Dropdown>
+                  <Dropdown.Trigger
+                    aria-label="Account menu"
+                    className={clsx(
+                      "flex-1 flex items-center transition-all outline-none",
+                      isRail
+                        ? "size-10 shrink-0 justify-center rounded-full border-0 bg-transparent p-0 hover:bg-[var(--sidebar-item-hover)]"
+                        : "min-w-0 cursor-pointer gap-3 rounded-xl p-1.5 hover:bg-default-100/50 text-left",
+                    )}
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className={clsx(
+                          "shrink-0 rounded-full object-cover",
+                          isRail ? "size-9" : "size-9 shadow-sm"
+                        )}
+                      />
+                    ) : (
+                      <div
+                        className={clsx(
+                          "flex shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-user-avatar-bg)] font-semibold text-[var(--sidebar-user-avatar-fg)]",
+                          isRail ? "size-9 text-xs" : "size-9 text-[12px]",
+                        )}
+                      >
+                        {initials}
+                      </div>
+                    )}
+                    {!isRail && (
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className="truncate text-sm font-bold leading-tight text-default-900">
+                          {displayName}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] leading-tight text-default-500 font-medium tracking-tight">
+                          {planLabel}
+                        </p>
+                      </div>
+                    )}
+                  </Dropdown.Trigger>
                 <Dropdown.Popover
                   placement="top start"
                   offset={8}
@@ -296,103 +273,8 @@ export const SidebarWrapper = () => {
                 >
                   <Dropdown.Menu
                     aria-label="Account"
-                    className="min-w-[220px] gap-0 rounded-2xl p-1.5"
+                    className="min-w-[160px] gap-0 rounded-2xl p-1.5"
                   >
-                    <Dropdown.Item
-                      key="settings"
-                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                      onPress={() => {
-                        router.push("/dashboard/settings");
-                        closeMobileSidebar();
-                      }}
-                    >
-                      <span className="flex items-center gap-3">
-                        <SettingsIcon
-                          size={18}
-                          className="shrink-0 text-default-600"
-                        />
-                        <span className="text-sm font-medium text-default-900">
-                          My Settings
-                        </span>
-                      </span>
-                    </Dropdown.Item>
-                    <Dropdown.Item
-                      key="billing"
-                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                      onPress={() => {
-                        router.push("/dashboard/billing");
-                        closeMobileSidebar();
-                      }}
-                    >
-                      <span className="flex items-center gap-3">
-                        <BillingIcon
-                          size={18}
-                          className="shrink-0 text-default-600"
-                        />
-                        <span className="text-sm font-medium text-default-900">
-                          Billing Info
-                        </span>
-                      </span>
-                    </Dropdown.Item>
-                    <Dropdown.Item
-                      key="help"
-                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                      onPress={() => {
-                        router.push("/dashboard/help-feedback");
-                        closeMobileSidebar();
-                      }}
-                    >
-                      <span className="flex items-center gap-3">
-                        <HelpCircleIcon className="shrink-0 text-default-600" />
-                        <span className="text-sm font-medium text-default-900">
-                          Help &amp; Feedback
-                        </span>
-                      </span>
-                    </Dropdown.Item>
-                    <Dropdown.Item
-                      key="theme"
-                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-default"
-                      textValue={
-                        themeMounted
-                          ? isLight
-                            ? "Switch to dark mode"
-                            : "Switch to light mode"
-                          : "Appearance"
-                      }
-                      onPress={() => {
-                        setTheme(isLight ? "dark" : "light");
-                        closeMobileSidebar();
-                      }}
-                    >
-                      <span className="flex items-center gap-3">
-                        {themeMounted ? (
-                          isLight ? (
-                            <MoonFilledIcon
-                              size={18}
-                              className="shrink-0 text-default-600"
-                            />
-                          ) : (
-                            <SunFilledIcon
-                              size={18}
-                              className="shrink-0 text-default-600"
-                            />
-                          )
-                        ) : (
-                          <span
-                            className="size-[18px] shrink-0"
-                            aria-hidden
-                          />
-                        )}
-                        <span className="text-sm font-medium text-default-900">
-                          {themeMounted
-                            ? isLight
-                              ? "Dark mode"
-                              : "Light mode"
-                            : "Appearance"}
-                        </span>
-                      </span>
-                    </Dropdown.Item>
-                    <Separator className="my-1 h-px bg-divider" />
                     <Dropdown.Item
                       key="logout"
                       className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 text-danger data-[hovered=true]:bg-danger/10"
@@ -406,6 +288,19 @@ export const SidebarWrapper = () => {
                   </Dropdown.Menu>
                 </Dropdown.Popover>
               </Dropdown>
+              
+              {!isRail && (
+                <Button
+                  isIconOnly
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-9 w-9 min-w-0 rounded-xl hover:bg-default-200/50 text-default-400 hover:text-default-900 transition-all border-none"
+                  onPress={() => setIsSettingsModalOpen(true)}
+                >
+                  <SettingsIcon size={18} />
+                </Button>
+              )}
+              </div>
             ) : (
               <div className={clsx("flex w-full gap-2", isRail && "flex-col items-center")}>
                 <Button
@@ -471,6 +366,10 @@ export const SidebarWrapper = () => {
             )}
           </div>
         </div>
+        <SettingsModal 
+          isOpen={isSettingsModalOpen} 
+          onOpenChange={setIsSettingsModalOpen} 
+        />
       </div>
     </>
   );

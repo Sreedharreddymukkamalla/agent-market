@@ -50,10 +50,10 @@
     --accent-foreground: oklch(0.99 0.002 265);
 
     /* Sidebar (~#f8f9fa / #e8eaed — AI Studio–style rail) */
-    --sidebar-bg: oklch(0.978 0.0025 264);
-    --sidebar-border: oklch(0.915 0.004 264);
-    --sidebar-item-hover: oklch(0.954 0.004 264);
-    --sidebar-item-active: oklch(0.915 0.004 264);
+    --sidebar-bg: oklch(0.966 0.008 87);
+    --sidebar-border: oklch(0.92 0.01 87);
+    --sidebar-item-hover: oklch(0.945 0.01 87);
+    --sidebar-item-active: oklch(0.92 0.01 87);
     --sidebar-fg-active: var(--text-primary);
     /* ChatGPT-style profile chip (initials) */
     --sidebar-user-avatar-bg: oklch(0.52 0.11 195);
