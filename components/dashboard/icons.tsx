@@ -295,8 +295,10 @@ export const UserIcon = ({
 export const RobotIcon = ({
   size = 24,
   className,
-  fill = "currentColor",
-}: IconProps) => (
+}: {
+  size?: number;
+  className?: string;
+}) => (
   <svg
     width={size}
     height={size}
@@ -305,12 +307,52 @@ export const RobotIcon = ({
     xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    <path
-      fill={fill}
-      d="M19 8h-1.07c-.45-1.72-1.45-3.2-2.8-4.27l1.3-1.3c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0l-1.44 1.44c-.51-.17-1.04-.26-1.58-.26s-1.07.09-1.58.26L9.02 1.02c-.39-.39-1.03-.39-1.42 0-.39.39-.39 1.02 0 1.41l1.3 1.3c-1.35 1.08-2.35 2.55-2.8 4.27H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2zm-9 10c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm0-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm4 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm0-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"
-    />
+    {/* Antenna base */}
+    <rect x="11.25" y="1" width="1.5" height="3" rx="0.5" fill="currentColor" opacity="0.8" />
+    {/* Antenna ball */}
+    <circle cx="12" cy="1" r="1" fill="currentColor" />
+
+    {/* Head */}
+    <rect x="4" y="4" width="16" height="10" rx="2.5" fill="currentColor" opacity="0.15" />
+    <rect x="4" y="4" width="16" height="10" rx="2.5" stroke="currentColor" strokeWidth="1.2" />
+
+    {/* Visor / eye bar */}
+    <rect x="6" y="6.5" width="12" height="4.5" rx="1.2" fill="currentColor" opacity="0.15" />
+
+    {/* Left eye */}
+    <circle cx="9" cy="8.75" r="1.5" fill="currentColor" opacity="0.9" />
+    <circle cx="9.5" cy="8.25" r="0.4" fill="currentColor" opacity="0.3" />
+
+    {/* Right eye */}
+    <circle cx="15" cy="8.75" r="1.5" fill="currentColor" opacity="0.9" />
+    <circle cx="15.5" cy="8.25" r="0.4" fill="currentColor" opacity="0.3" />
+
+    {/* Mouth dots */}
+    <circle cx="10" cy="12.5" r="0.6" fill="currentColor" opacity="0.7" />
+    <circle cx="12" cy="12.5" r="0.6" fill="currentColor" opacity="0.7" />
+    <circle cx="14" cy="12.5" r="0.6" fill="currentColor" opacity="0.7" />
+
+    {/* Neck */}
+    <rect x="10.5" y="14" width="3" height="1.5" rx="0.5" fill="currentColor" opacity="0.6" />
+
+    {/* Body */}
+    <rect x="3" y="15.5" width="18" height="7" rx="2" fill="currentColor" opacity="0.15" />
+    <rect x="3" y="15.5" width="18" height="7" rx="2" stroke="currentColor" strokeWidth="1.2" />
+
+    {/* Chest panel */}
+    <rect x="8" y="17" width="8" height="4" rx="1" fill="currentColor" opacity="0.2" />
+
+    {/* Chest LEDs */}
+    <circle cx="10" cy="19" r="0.8" fill="currentColor" opacity="0.9" />
+    <circle cx="12" cy="19" r="0.8" fill="currentColor" opacity="0.5" />
+    <circle cx="14" cy="19" r="0.8" fill="currentColor" opacity="0.9" />
+
+    {/* Left arm bump */}
+    <rect x="1" y="16" width="2.5" height="5" rx="1.2" fill="currentColor" opacity="0.6" />
+    {/* Right arm bump */}
+    <rect x="20.5" y="16" width="2.5" height="5" rx="1.2" fill="currentColor" opacity="0.6" />
   </svg>
-);
+);  
 
 export const PaletteIcon = ({
   size = 24,

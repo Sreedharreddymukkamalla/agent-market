@@ -13,6 +13,7 @@ import {
   MCPIcon,
   AgentAimIcon,
   SettingsIcon,
+  RobotIcon,
 } from "../icons";
 import { SidebarItem } from "./sidebar-item";
 import { SidebarMenu } from "./sidebar-menu";
@@ -66,7 +67,7 @@ function getInitials(name: string, email: string): string {
 
 export const SidebarWrapper = () => {
   const pathname = usePathname();
-  const router = useRouter();  const { sidebarOpen, closeSidebar, isMdUp } = useSidebarContext();
+  const router = useRouter(); const { sidebarOpen, closeSidebar, isMdUp } = useSidebarContext();
   const isRail = isMdUp && !sidebarOpen;
   const mobileDrawerOpen = !isMdUp && sidebarOpen;
   const [user, setUser] = useState<User | null>(null);
@@ -183,12 +184,12 @@ export const SidebarWrapper = () => {
               <SidebarItem
                 isActive={pathname === "/dashboard/agents"}
                 title="My Agents"
-                icon={<AgentsIcon />}
+                icon={<RobotIcon />}
                 href={(!user) ? "/login" : "/dashboard/agents"}
               />
               <SidebarItem
                 isActive={pathname === "/dashboard/marketplace"}
-                title="Agent MarketPlace"
+                title="Agent Market"
                 icon={<MarketplaceIcon />}
                 href="/dashboard/marketplace"
               />
@@ -266,40 +267,40 @@ export const SidebarWrapper = () => {
                       </div>
                     )}
                   </Dropdown.Trigger>
-                <Dropdown.Popover
-                  placement="top start"
-                  offset={8}
-                  className="rounded-2xl border border-divider bg-overlay p-0 shadow-[var(--overlay-shadow)]"
-                >
-                  <Dropdown.Menu
-                    aria-label="Account"
-                    className="min-w-[160px] gap-0 rounded-2xl p-1.5"
+                  <Dropdown.Popover
+                    placement="top start"
+                    offset={8}
+                    className="rounded-2xl border border-divider bg-overlay p-0 shadow-[var(--overlay-shadow)]"
                   >
-                    <Dropdown.Item
-                      key="logout"
-                      className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 text-danger data-[hovered=true]:bg-danger/10"
-                      onPress={handleLogout}
+                    <Dropdown.Menu
+                      aria-label="Account"
+                      className="min-w-[160px] gap-0 rounded-2xl p-1.5"
                     >
-                      <span className="flex items-center gap-3">
-                        <LogOutIcon className="shrink-0 text-danger" />
-                        <span className="text-sm font-medium">Sign out</span>
-                      </span>
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown.Popover>
-              </Dropdown>
-              
-              {!isRail && (
-                <Button
-                  isIconOnly
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 h-9 w-9 min-w-0 rounded-xl hover:bg-default-200/50 text-default-400 hover:text-default-900 transition-all border-none"
-                  onPress={() => setIsSettingsModalOpen(true)}
-                >
-                  <SettingsIcon size={18} />
-                </Button>
-              )}
+                      <Dropdown.Item
+                        key="logout"
+                        className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 text-danger data-[hovered=true]:bg-danger/10"
+                        onPress={handleLogout}
+                      >
+                        <span className="flex items-center gap-3">
+                          <LogOutIcon className="shrink-0 text-danger" />
+                          <span className="text-sm font-medium">Sign out</span>
+                        </span>
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown.Popover>
+                </Dropdown>
+
+                {!isRail && (
+                  <Button
+                    isIconOnly
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 h-9 w-9 min-w-0 rounded-xl hover:bg-default-200/50 text-default-400 hover:text-default-900 transition-all border-none"
+                    onPress={() => setIsSettingsModalOpen(true)}
+                  >
+                    <SettingsIcon size={18} />
+                  </Button>
+                )}
               </div>
             ) : (
               <div className={clsx("flex w-full gap-2", isRail && "flex-col items-center")}>
@@ -366,9 +367,9 @@ export const SidebarWrapper = () => {
             )}
           </div>
         </div>
-        <SettingsModal 
-          isOpen={isSettingsModalOpen} 
-          onOpenChange={setIsSettingsModalOpen} 
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onOpenChange={setIsSettingsModalOpen}
         />
       </div>
     </>
