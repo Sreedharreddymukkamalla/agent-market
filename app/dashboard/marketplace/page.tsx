@@ -5,6 +5,7 @@ import { Card, Button, Chip, Spinner } from "@heroui/react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { PlusIcon } from "@/components/icons";
+import { RobotIcon } from "@/components/dashboard/icons";
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 const steps = ["Configure", "Add MCPs", "Deploy"];
@@ -320,7 +321,7 @@ export default function MarketplacePage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-bold text-default-900">Agent MarketPlace</h1>
-          <p className="text-default-500">Discover and build your own AI agents on GitHub + Cloud Run.</p>
+          <p className="text-default-500">Discover and build your own AI agents.</p>
         </div>
 
         <Button
@@ -338,58 +339,101 @@ export default function MarketplacePage() {
           <p className="text-default-500">No agents found. Build your first one!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-          {marketAgents.map((agent) => (
-            <Card
-              key={agent.id}
-              className="bg-surface/50 border border-primary/20 p-4 transition-colors hover:bg-surface-secondary flex flex-col gap-3 text-left"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-lg font-bold text-default-900 truncate pr-2">{agent.name}</h3>
-                  <p className="text-default-500 text-xs line-clamp-1 mt-0.5">
-                    {agent.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-default-400 mt-1 whitespace-nowrap bg-default-100/50 px-2 py-0.5 rounded-full">
-                  <span className="text-primary text-[8px]">●</span>
-                  <span>Active</span>
-                </div>
-              </div>
+        <div className="max-w-7xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-4">
+            {marketAgents.map((agent, idx) => {
+              // Generate a deterministic gradient based on agent name or index
+              const gradients = [
+                "from-blue-500/20 to-cyan-500/20",
+                "from-purple-500/20 to-pink-500/20",
+                "from-emerald-500/20 to-teal-500/20",
+                "from-orange-500/20 to-amber-500/20",
+                "from-indigo-500/20 to-blue-500/20",
+                "from-rose-500/20 to-orange-500/20",
+              ];
+              const gradient = gradients[idx % gradients.length];
 
-              <div className="flex justify-between items-center pt-2 border-t border-divider/50">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="font-medium h-9 px-4 hover:bg-default-100 transition-colors"
-                  onClick={() => {
-                    if (agent.cloud_run_url) window.open(agent.cloud_run_url, "_blank");
-                  }}
+              return (
+                <Card
+                  key={agent.id}
+                  className="bg-surface/30 border border-divider hover:border-primary/40 transition-all duration-300 flex flex-col group overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/5 active:scale-[0.99]"
                 >
-                  View Agent
-                </Button>
-                <Button
-                  size="sm"
-                  variant={justAdded === agent.id ? "ghost" : "primary"}
-                  className={`font-bold h-9 px-4 shadow-sm transition-all duration-200 ${
-                    justAdded === agent.id 
-                      ? "bg-success/20 text-success border-success/30 hover:bg-success/30" 
-                      : "hover:shadow-md hover:shadow-primary/10 hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
-                  isDisabled={addingToMyAgents === agent.id}
-                  onClick={() => handleAddToMyAgents(agent)}
-                >
-                  {addingToMyAgents === agent.id ? (
-                    <Spinner size="sm" color="current" />
-                  ) : justAdded === agent.id ? (
-                    "Added ✓"
-                  ) : (
-                    "Add to my Agents"
-                  )}
-                </Button>
-              </div>
-            </Card>
-          ))}
+                  {/* Visual Header */}
+                  <div className={`h-24 w-full bg-gradient-to-br ${gradient} flex items-center justify-center relative overflow-hidden`}>
+                    <div className="absolute inset-0 bg-grid-white/5" />
+                    <div className="z-10 bg-background/80 backdrop-blur-md p-3 rounded-2xl shadow-lg border border-white/10 group-hover:scale-110 transition-transform duration-500">
+                      <RobotIcon size={32} className="text-primary" />
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/60 backdrop-blur-md border border-white/10 shadow-sm transition-opacity duration-300">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                      </span>
+                      <span className="text-[10px] font-bold text-default-700 uppercase tracking-wider">Active</span>
+                    </div>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-6 flex flex-col flex-1 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <h3 className="text-xl font-bold text-default-900 leading-tight group-hover:text-primary transition-colors">
+                        {agent.name}
+                      </h3>
+                      <p className="text-default-500 text-sm leading-relaxed line-clamp-2 min-h-[40px]">
+                        {agent.description || "Experimental AI agent built on the ADK framework."}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-auto pt-2">
+                      <Chip size="sm" variant="soft" className="bg-default-100 text-default-600 font-medium">
+                        Cloud Run
+                      </Chip>
+                      <Chip size="sm" variant="soft" className="bg-default-100 text-default-600 font-medium">
+                        Gemini
+                      </Chip>
+                      <Chip size="sm" variant="soft" className="bg-default-100 text-default-600 font-medium">
+                        Google ADK
+                      </Chip>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="flex justify-between items-center mt-auto pt-4 border-t border-divider/50">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="font-bold text-default-600 hover:text-primary transition-colors px-0 min-w-0 h-auto bg-transparent hover:bg-transparent"
+                        onClick={() => {
+                          if (agent.cloud_run_url) window.open(agent.cloud_run_url, "_blank");
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        size="md"
+                        variant={justAdded === agent.id ? "ghost" : "primary"}
+                        className={`font-bold transition-all duration-300 px-6 ${justAdded === agent.id
+                          ? "bg-success/10 text-success border-success/20"
+                          : "bg-primary text-primary-foreground shadow-md hover:shadow-primary/20"
+                          }`}
+                        isDisabled={addingToMyAgents === agent.id}
+                        onClick={() => handleAddToMyAgents(agent)}
+                      >
+                        {addingToMyAgents === agent.id ? (
+                          <Spinner size="sm" color="current" />
+                        ) : justAdded === agent.id ? (
+                          "Added ✓"
+                        ) : (
+                          "Add Agent"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
 

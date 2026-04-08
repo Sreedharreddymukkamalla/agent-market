@@ -45,9 +45,9 @@
     --default: oklch(0.92 0.006 265);
     --default-foreground: var(--text-primary);
 
-    /* Primary CTA: dark neutral fill (ChatGPT light) */
-    --accent: oklch(0.24 0.014 265);
-    --accent-foreground: oklch(0.99 0.002 265);
+    /* Primary CTA: Vivid Blue (#0088F6) */
+    --accent: oklch(0.6204 0.195 253.83);
+    --accent-foreground: oklch(100% 0 0);
 
     /* Sidebar (~#f8f9fa / #e8eaed — AI Studio–style rail) */
     --sidebar-bg: oklch(0.966 0.008 87);
@@ -86,8 +86,8 @@
 
     --border: oklch(0.9 0.004 264);
     --separator: oklch(0.915 0.004 264);
-    --focus: oklch(0.48 0.06 250);
-    --link: oklch(0.38 0.06 250);
+    --focus: var(--accent);
+    --link: var(--accent);
 
     --surface-shadow:
       0 1px 2px 0 oklch(0% 0 0 / 0.04),
@@ -158,9 +158,9 @@
     --default: oklch(0.34 0.012 265);
     --default-foreground: var(--text-primary);
 
-    /* Primary CTA: light neutral on dark */
-    --accent: oklch(0.93 0.008 265);
-    --accent-foreground: oklch(0.20 0.015 265);
+    /* Primary CTA: Vivid Blue (#0088F6) */
+    --accent: oklch(0.6204 0.195 253.83);
+    --accent-foreground: oklch(100% 0 0);
 
     --sidebar-bg: oklch(0.19 0.014 265);
     --sidebar-border: oklch(0.32 0.012 265);
@@ -194,8 +194,8 @@
 
     --border: oklch(0.36 0.012 265);
     --separator: oklch(0.34 0.012 265);
-    --focus: oklch(0.72 0.08 250);
-    --link: oklch(0.75 0.08 250);
+    --focus: var(--accent);
+    --link: var(--accent);
 
     --surface-shadow:
       0 1px 2px oklch(0% 0 0 / 0.24),

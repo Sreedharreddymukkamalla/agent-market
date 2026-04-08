@@ -79,7 +79,7 @@ export const SettingsModal = ({ isOpen, onOpenChange }: SettingsModalProps) => {
                 className={clsx(
                   "group flex h-24 min-w-[140px] w-full flex-col items-center justify-center gap-2.5 rounded-2xl border-2 transition-all p-0 overflow-hidden border-none",
                   theme === "light"
-                    ? "bg-black text-white shadow-lg shadow-black/10 dark:bg-white dark:text-black"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10"
                     : "bg-default-50 text-default-600 hover:bg-default-100 ring-1 ring-divider"
                 )}
                 onPress={() => setTheme("light")}
@@ -98,7 +98,7 @@ export const SettingsModal = ({ isOpen, onOpenChange }: SettingsModalProps) => {
                 className={clsx(
                   "group flex h-24 min-w-[140px] w-full flex-col items-center justify-center gap-2.5 rounded-2xl border-2 transition-all p-0 overflow-hidden border-none",
                   theme === "dark"
-                    ? "bg-black text-white shadow-lg shadow-black/10 dark:bg-white dark:text-black"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10"
                     : "bg-default-50 text-default-600 hover:bg-default-100 ring-1 ring-divider"
                 )}
                 onPress={() => setTheme("dark")}
@@ -117,7 +117,7 @@ export const SettingsModal = ({ isOpen, onOpenChange }: SettingsModalProps) => {
                 className={clsx(
                   "group flex h-24 min-w-[140px] w-full flex-col items-center justify-center gap-2.5 rounded-2xl border-2 transition-all p-0 overflow-hidden border-none",
                   theme === "system"
-                    ? "bg-black text-white shadow-lg shadow-black/10 dark:bg-white dark:text-black"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10"
                     : "bg-default-50 text-default-600 hover:bg-default-100 ring-1 ring-divider"
                 )}
                 onPress={() => setTheme("system")}
@@ -280,7 +280,8 @@ export const SettingsModal = ({ isOpen, onOpenChange }: SettingsModalProps) => {
                 </p>
               </div>
               <Button
-                className="w-fit h-12 px-8 bg-black text-white hover:bg-black/80 font-bold rounded-2xl transition-all"
+                variant="primary"
+                className="w-fit h-12 px-8 font-bold rounded-2xl transition-all"
                 onPress={handleSignOut}
               >
                 Sign Out

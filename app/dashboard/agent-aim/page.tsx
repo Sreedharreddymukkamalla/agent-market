@@ -1546,7 +1546,7 @@ export default function AgentAimPage() {
                             disabled={!editingDraft.trim() || loading}
                             onClick={() => void confirmInlineEdit()}
                             className={clsx(
-                              "rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-sm",
+                              "rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm",
                               "transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40",
                             )}
                           >
@@ -1625,12 +1625,12 @@ export default function AgentAimPage() {
                               >
                                 {copied ? <IconCheck /> : <IconCopy />}
                               </Tooltip.Trigger>
-                              <Tooltip.Content
-                                className={clsx(
-                                  "rounded-full border-0 bg-foreground px-3 py-1.5 text-xs font-medium",
-                                  "text-background shadow-lg",
-                                )}
-                              >
+                                <Tooltip.Content
+                                  className={clsx(
+                                    "rounded-full border-0 bg-[var(--accent)] px-3 py-1.5 text-xs font-medium",
+                                    "text-[var(--accent-foreground)] shadow-lg",
+                                  )}
+                                >
                                 {copied ? "Copied" : "Copy message"}
                               </Tooltip.Content>
                             </Tooltip>
