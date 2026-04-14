@@ -10,7 +10,6 @@ export const siteConfig = {
     },
   ],
   navMenuItems: [
-
     {
       label: "Settings",
       href: "/settings",

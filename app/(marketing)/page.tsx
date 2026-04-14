@@ -1,4 +1,5 @@
 import NextLink from "next/link";
+
 import { title, subtitle } from "@/components/primitives";
 
 export default function Home() {
@@ -10,8 +11,8 @@ export default function Home() {
           <span className="text-foreground font-semibold">AI Agents</span>
         </h1>
         <p className={subtitle({ className: "mt-4 max-w-2xl mx-auto" })}>
-          Discover, deploy, and manage powerful AI agents tailored for your specific needs.
-          Experience the future of automated intelligence.
+          Discover, deploy, and manage powerful AI agents tailored for your
+          specific needs. Experience the future of automated intelligence.
         </p>
       </div>
 

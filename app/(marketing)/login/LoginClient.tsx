@@ -1,19 +1,28 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { Button, Input, Card, Separator, TextField, Label } from '@heroui/react';
-import { createClient } from '@/utils/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from "react";
+import {
+  Button,
+  Input,
+  Card,
+  Separator,
+  TextField,
+  Label,
+} from "@heroui/react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { createClient } from "@/utils/supabase/client";
 
 export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+  const initialMode =
+    searchParams.get("mode") === "signup" ? "signup" : "login";
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -27,13 +36,14 @@ export default function LoginClient() {
     setLoading(true);
     setError(null);
 
-    if (mode === 'signup' && password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (mode === "signup" && password !== confirmPassword) {
+      setError("Passwords do not match");
       setLoading(false);
+
       return;
     }
 
-    if (mode === 'login') {
+    if (mode === "login") {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -51,7 +61,7 @@ export default function LoginClient() {
         email,
         password,
         options: {
-          emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
+          emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
         },
       });
 
@@ -59,6 +69,7 @@ export default function LoginClient() {
         setError(signUpError.message);
       } else {
         const verifyUrl = `/verify?email=${encodeURIComponent(email)}`;
+
         router.push(verifyUrl);
       }
       setLoading(false);
@@ -70,17 +81,18 @@ export default function LoginClient() {
     setError(null);
     try {
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-          scopes: 'profile email',
+          scopes: "profile email",
           redirectTo: `${
-            typeof window !== 'undefined' ? window.location.origin : ''
+            typeof window !== "undefined" ? window.location.origin : ""
           }/auth/callback?next=${encodeURIComponent("/dashboard/agent-aim?aimFresh=1")}`,
         },
       });
 
       if (oauthError) {
         setError(oauthError.message);
+
         return;
       }
 
@@ -102,6 +114,7 @@ export default function LoginClient() {
 
       if (guestError) {
         setError(guestError.message);
+
         return;
       }
 
@@ -119,23 +132,23 @@ export default function LoginClient() {
       <Card className="w-full max-w-md p-8 shadow-2xl backdrop-blur-md bg-background/60">
         <div className="flex flex-col gap-4 text-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {mode === 'login' ? 'Welcome Back' : 'Create an Account'}
+            {mode === "login" ? "Welcome Back" : "Create an Account"}
           </h1>
           <p className="text-muted-foreground">
-            {mode === 'login'
-              ? 'Enter your credentials to access your account'
-              : 'Complete the fields below to join our community'}
+            {mode === "login"
+              ? "Enter your credentials to access your account"
+              : "Complete the fields below to join our community"}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
           <TextField isRequired>
             <Label>Email</Label>
             <Input
               placeholder="Enter your email"
               type="email"
-              variant="secondary"
               value={email}
+              variant="secondary"
               onChange={(e) => setEmail(e.target.value)}
             />
           </TextField>
@@ -145,35 +158,39 @@ export default function LoginClient() {
             <Input
               placeholder="Enter your password"
               type="password"
-              variant="secondary"
               value={password}
+              variant="secondary"
               onChange={(e) => setPassword(e.target.value)}
             />
           </TextField>
 
-          {mode === 'signup' && (
+          {mode === "signup" && (
             <TextField isRequired>
               <Label>Confirm Password</Label>
               <Input
                 placeholder="Confirm your password"
                 type="password"
-                variant="secondary"
                 value={confirmPassword}
+                variant="secondary"
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </TextField>
           )}
 
-          {error && <p className="text-danger text-sm text-center font-medium">{error}</p>}
+          {error && (
+            <p className="text-danger text-sm text-center font-medium">
+              {error}
+            </p>
+          )}
 
           <Button
-            variant="primary"
+            className="w-full font-semibold shadow-lg shadow-primary/20"
+            isPending={loading}
             size="lg"
             type="submit"
-            isPending={loading}
-            className="w-full font-semibold shadow-lg shadow-primary/20"
+            variant="primary"
           >
-            {mode === 'login' ? 'Log In' : 'Sign Up'}
+            {mode === "login" ? "Log In" : "Sign Up"}
           </Button>
         </form>
 
@@ -186,42 +203,62 @@ export default function LoginClient() {
         <div className="text-center">
           <div className="flex flex-col gap-3">
             <Button
-              variant="secondary"
-              size="lg"
               className="w-full flex items-center justify-center gap-3"
-              onClick={signInWithGoogle}
               isPending={loading}
+              size="lg"
+              variant="secondary"
+              onClick={signInWithGoogle}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M21.35 11.1h-9.18v2.92h5.26c-.23 1.4-1.44 3.6-5.26 3.6-3.16 0-5.74-2.6-5.74-5.8s2.58-5.8 5.74-5.8c1.8 0 3.02.76 3.72 1.42l2.54-2.44C17.77 3.3 15.77 2.2 12.9 2.2 7.79 2.2 3.8 6.18 3.8 11.3s3.99 9.1 9.1 9.1c5.25 0 8.73-3.68 8.73-8.87 0-.6-.07-1.05-.38-1.43z" fill="currentColor"/>
+              <svg
+                aria-hidden
+                fill="none"
+                height="18"
+                viewBox="0 0 24 24"
+                width="18"
+              >
+                <path
+                  d="M21.35 11.1h-9.18v2.92h5.26c-.23 1.4-1.44 3.6-5.26 3.6-3.16 0-5.74-2.6-5.74-5.8s2.58-5.8 5.74-5.8c1.8 0 3.02.76 3.72 1.42l2.54-2.44C17.77 3.3 15.77 2.2 12.9 2.2 7.79 2.2 3.8 6.18 3.8 11.3s3.99 9.1 9.1 9.1c5.25 0 8.73-3.68 8.73-8.87 0-.6-.07-1.05-.38-1.43z"
+                  fill="currentColor"
+                />
               </svg>
               Continue with Google
             </Button>
 
             <Button
-              variant="secondary"
-              size="lg"
               className="w-full flex items-center justify-center gap-3"
-              onClick={signInAsGuest}
               isPending={loading}
+              size="lg"
+              variant="secondary"
+              onClick={signInAsGuest}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              <svg
+                aria-hidden
+                fill="none"
+                height="18"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="18"
+              >
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
               Continue as Guest
             </Button>
 
             <button
+              className="text-sm font-medium text-primary hover:underline transition-all"
               type="button"
               onClick={() => {
-                setMode(mode === 'login' ? 'signup' : 'login');
+                setMode(mode === "login" ? "signup" : "login");
                 setError(null);
               }}
-              className="text-sm font-medium text-primary hover:underline transition-all"
             >
-              {mode === 'login'
+              {mode === "login"
                 ? "Don't have an account? Create one"
-                : 'Already have an account? Log in'}
+                : "Already have an account? Log in"}
             </button>
           </div>
         </div>

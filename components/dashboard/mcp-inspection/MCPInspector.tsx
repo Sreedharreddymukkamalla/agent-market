@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, TextField, InputGroup } from "@heroui/react";
-import { ThemeSwitch } from "@/components/theme-switch";
+import { Button } from "@heroui/react";
 
 const TABS = ["Tools", "Resources", "Prompts"];
 
@@ -127,6 +126,7 @@ export default function MCPInspector() {
       message,
       time: new Date().toLocaleTimeString(),
     };
+
     setLogs((prev) => [entry, ...prev].slice(0, 50));
     if (activeServerId) {
       setServers((prev) =>
@@ -139,59 +139,64 @@ export default function MCPInspector() {
     }
   };
 
-  const connect = useCallback(async (urlParam?: string, tokenParam?: string) => {
-    const urlToUse = urlParam ?? serverUrl;
-    const tokenToUse = tokenParam ?? authToken;
-    if (!urlToUse?.trim()) return;
-    setConnecting(true);
-    setError("");
-    setSelectedTool(null);
-    setCallResult(null);
+  const connect = useCallback(
+    async (urlParam?: string, tokenParam?: string) => {
+      const urlToUse = urlParam ?? serverUrl;
+      const tokenToUse = tokenParam ?? authToken;
 
-    addLog("request", `Connecting to ${urlToUse}`);
+      if (!urlToUse?.trim()) return;
+      setConnecting(true);
+      setError("");
+      setSelectedTool(null);
+      setCallResult(null);
 
-    try {
-      const res = await fetch("/api/mcp/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlToUse, token: tokenToUse }),
-      });
-      const data = await res.json();
+      addLog("request", `Connecting to ${urlToUse}`);
 
-      if (!res.ok) throw new Error(data.error || "Connection failed");
+      try {
+        const res = await fetch("/api/mcp/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: urlToUse, token: tokenToUse }),
+        });
+        const data = await res.json();
 
-      const id = Date.now();
-      const serverEntry = {
-        id,
-        url: urlToUse,
-        token: tokenToUse,
-        info: data.serverInfo,
-        tools: [],
-        resources: [],
-        prompts: [],
-        logs: [],
-      };
+        if (!res.ok) throw new Error(data.error || "Connection failed");
 
-      setServers((prev) => [serverEntry, ...prev]);
-      setActiveServerId(id);
-      addLog(
-        "success",
-        `Connected: ${data.serverInfo?.name || "MCP Server"} v${data.serverInfo?.version || "?"}`,
-      );
+        const id = Date.now();
+        const serverEntry = {
+          id,
+          url: urlToUse,
+          token: tokenToUse,
+          info: data.serverInfo,
+          tools: [],
+          resources: [],
+          prompts: [],
+          logs: [],
+        };
 
-      // fetch tools for the new server
-      await fetchTab("Tools", serverEntry);
-    } catch (e: any) {
-      setError(e.message);
-      addLog("error", e.message);
-    } finally {
-      setConnecting(false);
-    }
-  }, [serverUrl, authToken, activeServerId, servers]);
+        setServers((prev) => [serverEntry, ...prev]);
+        setActiveServerId(id);
+        addLog(
+          "success",
+          `Connected: ${data.serverInfo?.name || "MCP Server"} v${data.serverInfo?.version || "?"}`,
+        );
+
+        // fetch tools for the new server
+        await fetchTab("Tools", serverEntry);
+      } catch (e: any) {
+        setError(e.message);
+        addLog("error", e.message);
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [serverUrl, authToken, activeServerId, servers],
+  );
 
   useEffect(() => {
     const url = searchParams.get("url");
     const token = searchParams.get("token");
+
     if (url && !hasAutoConnected.current) {
       hasAutoConnected.current = true;
       connect(url, token || "");
@@ -203,6 +208,7 @@ export default function MCPInspector() {
     setServers((prev) => prev.filter((s) => s.id !== activeServerId));
     setActiveServerId((prev) => {
       const remaining = servers.filter((s) => s.id !== prev);
+
       return remaining.length ? remaining[0].id : null;
     });
     setSelectedTool(null);
@@ -212,8 +218,10 @@ export default function MCPInspector() {
 
   const fetchTab = async (tab: string, serverObj?: any) => {
     const server = serverObj || activeServer;
+
     if (!server) return;
     const endpoint = tab.toLowerCase();
+
     addLog("request", `→ ${endpoint}/list (${server.url})`);
     try {
       const res = await fetch(`/api/mcp/${endpoint}`, {
@@ -222,6 +230,7 @@ export default function MCPInspector() {
         body: JSON.stringify({ url: server.url, token: server.token }),
       });
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error || `Failed to list ${endpoint}`);
 
       setServers((prev) =>
@@ -261,6 +270,7 @@ export default function MCPInspector() {
   const buildFromGit = async () => {
     if (!buildRepoUrl.trim()) {
       setError("Please provide a repository URL");
+
       return;
     }
     setBuilding(true);
@@ -272,6 +282,7 @@ export default function MCPInspector() {
         body: JSON.stringify({ url: buildRepoUrl, type: buildType }),
       });
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error || "Build failed");
       addLog("success", `Build started: ${data.message || "ok"}`);
       setShowBuildModal(false);
@@ -304,6 +315,7 @@ export default function MCPInspector() {
         }),
       });
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error || "Tool call failed");
       setCallResult(data.result);
       addLog("response", `← success`);
@@ -344,9 +356,9 @@ export default function MCPInspector() {
         ) : type === "number" || type === "integer" ? (
           <input
             id={fieldId}
+            placeholder={key}
             style={styles.input}
             type="number"
-            placeholder={key}
             value={toolArgs[key] ?? ""}
             onChange={(e) =>
               setToolArgs((p) => ({ ...p, [key]: Number(e.target.value) }))
@@ -355,9 +367,9 @@ export default function MCPInspector() {
         ) : (
           <input
             id={fieldId}
+            placeholder={key}
             style={styles.input}
             type="text"
-            placeholder={key}
             value={toolArgs[key] ?? ""}
             onChange={(e) =>
               setToolArgs((p) => ({ ...p, [key]: e.target.value }))
@@ -371,6 +383,7 @@ export default function MCPInspector() {
   const getSchemaFields = (tool: any) => {
     const props = (tool?.inputSchema?.properties || {}) as Record<string, any>;
     const required = (tool?.inputSchema?.required || []) as string[];
+
     return Object.entries(props).map(([key, schema]: [string, any]) => ({
       key,
       schema: { ...(schema as any), required: required.includes(key) },
@@ -396,14 +409,14 @@ export default function MCPInspector() {
             {servers.map((s) => (
               <button
                 key={s.id}
+                style={styles.serverTab(activeServerId === s.id)}
+                title={s.url}
                 onClick={() => {
                   setActiveServerId(s.id);
                   setSelectedTool(null);
                   setCallResult(null);
                   if (!s.tools || s.tools.length === 0) fetchTab("Tools", s);
                 }}
-                style={styles.serverTab(activeServerId === s.id)}
-                title={s.url}
               >
                 {serverLabel(s)}
                 {s.info?.version && (
@@ -414,6 +427,7 @@ export default function MCPInspector() {
               </button>
             ))}
             <button
+              style={styles.serverNew}
               onClick={() => {
                 setActiveServerId(null);
                 setServerUrl("");
@@ -421,7 +435,6 @@ export default function MCPInspector() {
                 setSelectedTool(null);
                 setCallResult(null);
               }}
-              style={styles.serverNew}
             >
               + New
             </button>
@@ -445,8 +458,10 @@ export default function MCPInspector() {
                 value={selectedPresetId}
                 onChange={(e) => {
                   const id = e.target.value;
+
                   setSelectedPresetId(id);
                   const preset = PRESET_SERVERS.find((p) => p.id === id);
+
                   if (preset) addPresetAndConnect(preset);
                 }}
               >
@@ -454,8 +469,8 @@ export default function MCPInspector() {
                 {PRESET_SERVERS.map((p) => (
                   <option
                     key={p.id}
-                    value={p.id}
                     style={{ color: tk.text, background: tk.surface }}
+                    value={p.id}
                   >
                     {p.name}
                   </option>
@@ -472,6 +487,7 @@ export default function MCPInspector() {
       <div style={styles.connectBar}>
         {!connected ? (
           <form
+            autoComplete="off"
             className="mcp-inspector-controls"
             style={{
               display: "flex",
@@ -481,40 +497,39 @@ export default function MCPInspector() {
               gap: 8,
               minWidth: 0,
             }}
-            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               if (!connecting && serverUrl.trim()) void connect();
             }}
           >
             <input
-              style={styles.urlInput}
-              type="text"
-              inputMode="url"
-              name="mcp-inspector-endpoint"
-              id="mcp-inspector-endpoint"
               autoComplete="url"
               autoCorrect="off"
-              spellCheck={false}
+              id="mcp-inspector-endpoint"
+              inputMode="url"
+              name="mcp-inspector-endpoint"
               placeholder="https://your-mcp-server.com/mcp"
+              spellCheck={false}
+              style={styles.urlInput}
+              type="text"
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
             />
             <input
+              autoComplete="new-password"
+              id="mcp-inspector-authorization"
+              name="mcp-inspector-authorization"
+              placeholder="Bearer token (optional)"
               style={{ ...styles.urlInput, width: 180, flex: "0 0 auto" }}
               type="password"
-              name="mcp-inspector-authorization"
-              id="mcp-inspector-authorization"
-              autoComplete="new-password"
-              placeholder="Bearer token (optional)"
               value={authToken}
               onChange={(e) => setAuthToken(e.target.value)}
             />
             <Button
-              type="submit"
               className=""
               isDisabled={connecting || !serverUrl.trim()}
               style={styles.connectBtn(connecting || !serverUrl.trim())}
+              type="submit"
             >
               {connecting ? "Connecting…" : "Connect"}
             </Button>
@@ -535,8 +550,8 @@ export default function MCPInspector() {
               Refresh
             </Button>
             <Button
-              variant="secondary"
               style={styles.disconnectBtn}
+              variant="secondary"
               onPress={disconnect}
             >
               Remove
@@ -553,11 +568,11 @@ export default function MCPInspector() {
             {TABS.map((tab) => (
               <button
                 key={tab}
-                role="tab"
                 aria-pressed={activeTab === tab}
+                disabled={!connected}
+                role="tab"
                 style={styles.tab(activeTab === tab)}
                 onClick={() => switchTab(tab)}
-                disabled={!connected}
               >
                 {tab}
                 {tab === "Tools" && (activeServer?.tools || []).length > 0 && (
@@ -600,9 +615,9 @@ export default function MCPInspector() {
                   }}
                 >
                   <Button
+                    style={{ padding: "6px 10px" }}
                     variant="secondary"
                     onPress={openBuildModal}
-                    style={{ padding: "6px 10px" }}
                   >
                     Build from Git
                   </Button>
@@ -662,9 +677,9 @@ export default function MCPInspector() {
                   )}
 
                   <Button
+                    isDisabled={calling}
                     style={styles.callBtn(calling)}
                     onPress={callTool}
-                    isDisabled={calling}
                   >
                     {calling ? "Running…" : "▶  Run Tool"}
                   </Button>
@@ -697,8 +712,8 @@ export default function MCPInspector() {
         <div style={styles.logHeader}>
           <span>JSON-RPC Log</span>
           <Button
-            variant="secondary"
             style={styles.clearBtn}
+            variant="secondary"
             onPress={() => setLogs([])}
           >
             clear
@@ -732,10 +747,10 @@ export default function MCPInspector() {
                 </label>
                 <input
                   id="build-repo-url"
+                  placeholder="https://github.com/org/repo.git"
                   style={styles.input}
                   value={buildRepoUrl}
                   onChange={(e) => setBuildRepoUrl(e.target.value)}
-                  placeholder="https://github.com/org/repo.git"
                 />
               </div>
 
@@ -748,9 +763,9 @@ export default function MCPInspector() {
                 </label>
                 <select
                   id="build-type"
+                  style={styles.input}
                   value={buildType}
                   onChange={(e) => setBuildType(e.target.value as any)}
-                  style={styles.input}
                 >
                   {BUILD_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -762,16 +777,16 @@ export default function MCPInspector() {
             </div>
             <div style={styles.modalFooter}>
               <Button
+                isDisabled={building}
                 variant="secondary"
                 onPress={closeBuildModal}
-                isDisabled={building}
               >
                 Cancel
               </Button>
               <Button
-                onPress={buildFromGit}
                 isDisabled={building}
                 style={{ marginLeft: 8 }}
+                onPress={buildFromGit}
               >
                 {building ? "Building…" : "Build"}
               </Button>
@@ -803,11 +818,13 @@ const tk = {
   mixRedBorder: "color-mix(in oklab, var(--tool-red) 30%, transparent)",
   mixRedBg: "color-mix(in oklab, var(--tool-red) 12%, var(--tool-surface))",
   mixAccentDash: "color-mix(in oklab, var(--accent) 40%, transparent)",
-  badgeBg: "color-mix(in oklab, var(--tool-surface) 88%, var(--foreground) 12%)",
+  badgeBg:
+    "color-mix(in oklab, var(--tool-surface) 88%, var(--foreground) 12%)",
 };
 
 function getStyles(): any {
   const C = tk;
+
   return {
     root: {
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",

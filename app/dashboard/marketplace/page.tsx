@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, Button, Chip, Spinner } from "@heroui/react";
-import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+
+import { createClient } from "@/utils/supabase/client";
 import { PlusIcon } from "@/components/icons";
 import { RobotIcon } from "@/components/dashboard/icons";
 
@@ -16,30 +17,38 @@ function StepBar({ current }: { current: number }) {
       {steps.map((label, i) => {
         const done = i < current;
         const active = i === current;
+
         return (
           <React.Fragment key={label}>
             <div className="flex flex-col items-center gap-1">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${done
-                  ? "bg-primary text-primary-foreground"
-                  : active
-                    ? "bg-primary/20 border-2 border-primary text-primary"
-                    : "bg-default-100 text-default-400"
-                  }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                  done
+                    ? "bg-primary text-primary-foreground"
+                    : active
+                      ? "bg-primary/20 border-2 border-primary text-primary"
+                      : "bg-default-100 text-default-400"
+                }`}
               >
                 {done ? "✓" : i + 1}
               </div>
               <span
-                className={`text-[10px] font-medium whitespace-nowrap ${active ? "text-primary" : done ? "text-default-600" : "text-default-400"
-                  }`}
+                className={`text-[10px] font-medium whitespace-nowrap ${
+                  active
+                    ? "text-primary"
+                    : done
+                      ? "text-default-600"
+                      : "text-default-400"
+                }`}
               >
                 {label}
               </span>
             </div>
             {i < steps.length - 1 && (
               <div
-                className={`flex-1 h-[2px] mb-4 mx-2 transition-all duration-500 ${i < current ? "bg-primary" : "bg-default-200"
-                  }`}
+                className={`flex-1 h-[2px] mb-4 mx-2 transition-all duration-500 ${
+                  i < current ? "bg-primary" : "bg-default-200"
+                }`}
               />
             )}
           </React.Fragment>
@@ -62,10 +71,16 @@ function StatusLog({ items }: { items: LogItem[] }) {
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-3 text-sm">
           <span className="w-5 text-center">
-            {item.state === "running" && <Spinner size="sm" color="current" />}
-            {item.state === "done" && <span className="text-green-500 font-bold">✓</span>}
-            {item.state === "error" && <span className="text-red-500 font-bold">✕</span>}
-            {item.state === "pending" && <span className="text-default-300">○</span>}
+            {item.state === "running" && <Spinner color="current" size="sm" />}
+            {item.state === "done" && (
+              <span className="text-green-500 font-bold">✓</span>
+            )}
+            {item.state === "error" && (
+              <span className="text-red-500 font-bold">✕</span>
+            )}
+            {item.state === "pending" && (
+              <span className="text-default-300">○</span>
+            )}
           </span>
           <span
             className={
@@ -124,16 +139,20 @@ export default function MarketplacePage() {
       await Promise.all([
         fetchMarketAgents(),
         fetchPresets(),
-        fetchUserAgents()
+        fetchUserAgents(),
       ]);
       setLoading(false);
     };
+
     init();
   }, []);
 
   const fetchUserAgents = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) return;
 
       const { data, error } = await supabase
@@ -142,7 +161,8 @@ export default function MarketplacePage() {
         .eq("user_id", user.id);
 
       if (error) throw error;
-      const urls = new Set(data?.map(a => a.cloud_run_url).filter(Boolean));
+      const urls = new Set(data?.map((a) => a.cloud_run_url).filter(Boolean));
+
       setUserAgentUrls(urls);
     } catch (error) {
       console.error("Failed to fetch user agents for collection check:", error);
@@ -152,6 +172,7 @@ export default function MarketplacePage() {
   const fetchPresets = async () => {
     try {
       const { data, error } = await supabase.from("adk_mcps").select("*");
+
       if (error) throw error;
       setPresets(data || []);
     } catch (error) {
@@ -162,6 +183,7 @@ export default function MarketplacePage() {
   const fetchMarketAgents = async () => {
     try {
       const { data, error } = await supabase.from("agent_market").select("*");
+
       if (error) throw error;
       setMarketAgents(data || []);
     } catch (error) {
@@ -172,9 +194,13 @@ export default function MarketplacePage() {
   const handleAddToMyAgents = async (agent: any) => {
     setAddingToMyAgents(agent.id);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         router.push("/login");
+
         return;
       }
 
@@ -196,9 +222,11 @@ export default function MarketplacePage() {
 
       // Update local state to reflect the addition immediately
       if (agent.cloud_run_url) {
-        setUserAgentUrls(prev => {
+        setUserAgentUrls((prev) => {
           const next = new Set(Array.from(prev));
+
           next.add(agent.cloud_run_url);
+
           return next;
         });
       }
@@ -237,13 +265,16 @@ export default function MarketplacePage() {
   const handleBuild = async () => {
     if (!customName || !customInstructions) {
       alert("Please provide both a name and instructions.");
+
       return;
     }
 
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
+
     if (!user) {
       alert("Please log in to build agents.");
+
       return;
     }
 
@@ -251,7 +282,10 @@ export default function MarketplacePage() {
     setBuildLog([
       { label: "Forking template repository...", state: "running" },
       { label: "Patching agent.py with your config...", state: "pending" },
-      { label: "Pushing to GitHub (triggers Cloud Run deploy)...", state: "pending" },
+      {
+        label: "Pushing to GitHub (triggers Cloud Run deploy)...",
+        state: "pending",
+      },
       { label: "Saving to Agent Market...", state: "pending" },
     ]);
 
@@ -263,25 +297,28 @@ export default function MarketplacePage() {
         const ghUser = await fetch("https://api.github.com/user", {
           headers: { Authorization: `Bearer ${githubPat}` },
         }).then((r) => r.json());
+
         if (ghUser.login) github_username = ghUser.login;
-      } catch (_) { }
+      } catch (_) {}
     }
 
     if (!github_username) {
       setBuildLog([
         {
-          label: "GitHub username could not be determined. Please provide a valid PAT.",
+          label:
+            "GitHub username could not be determined. Please provide a valid PAT.",
           state: "error",
         },
       ]);
       setBuilding(false);
+
       return;
     }
 
     try {
       await new Promise((r) => setTimeout(r, 500));
 
-      const response = await fetch('/api/agent-market/build', {
+      const response = await fetch("/api/agent-market/build", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -305,7 +342,10 @@ export default function MarketplacePage() {
       setBuildLog([
         { label: "Forked template repository", state: "done" },
         { label: "Patched agent.py with your config", state: "done" },
-        { label: "Pushed to GitHub (Cloud Run deploy triggered)", state: "done" },
+        {
+          label: "Pushed to GitHub (Cloud Run deploy triggered)",
+          state: "done",
+        },
         { label: "Saved to Agent Market", state: "done" },
       ]);
       setBuildResult({
@@ -318,8 +358,8 @@ export default function MarketplacePage() {
         prev.map((item) =>
           item.state === "running" || item.state === "pending"
             ? { ...item, state: "error" }
-            : item
-        )
+            : item,
+        ),
       );
       setBuildResult({ error: err.message });
     } finally {
@@ -329,7 +369,9 @@ export default function MarketplacePage() {
 
   // ── Step validation ────────────────────────────────────────────────────────
   const canAdvanceStep = () => {
-    if (step === 0) return customName.trim() !== "" && customInstructions.trim() !== "";
+    if (step === 0)
+      return customName.trim() !== "" && customInstructions.trim() !== "";
+
     return true;
   };
 
@@ -338,8 +380,10 @@ export default function MarketplacePage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Spinner size="lg" color="current" />
-        <p className="text-default-500 animate-pulse">Loading Agent MarketPlace...</p>
+        <Spinner color="current" size="lg" />
+        <p className="text-default-500 animate-pulse">
+          Loading Agent MarketPlace...
+        </p>
       </div>
     );
   }
@@ -349,8 +393,12 @@ export default function MarketplacePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold text-default-900">Agent MarketPlace</h1>
-          <p className="text-default-500">Discover and build your own AI agents.</p>
+          <h1 className="text-3xl font-bold text-default-900">
+            Agent MarketPlace
+          </h1>
+          <p className="text-default-500">
+            Discover and build your own AI agents.
+          </p>
         </div>
 
         <Button
@@ -365,7 +413,9 @@ export default function MarketplacePage() {
       {/* Agent grid */}
       {marketAgents.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] border-2 border-dashed border-divider rounded-xl">
-          <p className="text-default-500">No agents found. Build your first one!</p>
+          <p className="text-default-500">
+            No agents found. Build your first one!
+          </p>
         </div>
       ) : (
         <div className="max-w-7xl">
@@ -388,19 +438,23 @@ export default function MarketplacePage() {
                   className="bg-surface/30 border border-divider hover:border-primary/40 transition-all duration-300 flex flex-col group overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/5 active:scale-[0.99]"
                 >
                   {/* Visual Header */}
-                  <div className={`h-24 w-full bg-gradient-to-br ${gradient} flex items-center justify-center relative overflow-hidden`}>
+                  <div
+                    className={`h-24 w-full bg-gradient-to-br ${gradient} flex items-center justify-center relative overflow-hidden`}
+                  >
                     <div className="absolute inset-0 bg-grid-white/5" />
                     <div className="z-10 bg-background/80 backdrop-blur-md p-3 rounded-2xl shadow-lg border border-white/10 group-hover:scale-110 transition-transform duration-500">
-                      <RobotIcon size={32} className="text-primary" />
+                      <RobotIcon className="text-primary" size={32} />
                     </div>
 
                     {/* Status Badge */}
                     <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/60 backdrop-blur-md border border-white/10 shadow-sm transition-opacity duration-300">
                       <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
                       </span>
-                      <span className="text-[10px] font-bold text-default-700 uppercase tracking-wider">Active</span>
+                      <span className="text-[10px] font-bold text-default-700 uppercase tracking-wider">
+                        Active
+                      </span>
                     </div>
                   </div>
 
@@ -411,18 +465,31 @@ export default function MarketplacePage() {
                         {agent.name}
                       </h3>
                       <p className="text-default-500 text-sm leading-relaxed line-clamp-2 min-h-[40px]">
-                        {agent.description || "Experimental AI agent built on the ADK framework."}
+                        {agent.description ||
+                          "Experimental AI agent built on the ADK framework."}
                       </p>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-auto pt-2">
-                      <Chip size="sm" variant="soft" className="bg-default-100 text-default-600 font-medium">
+                      <Chip
+                        className="bg-default-100 text-default-600 font-medium"
+                        size="sm"
+                        variant="soft"
+                      >
                         Cloud Run
                       </Chip>
-                      <Chip size="sm" variant="soft" className="bg-default-100 text-default-600 font-medium">
+                      <Chip
+                        className="bg-default-100 text-default-600 font-medium"
+                        size="sm"
+                        variant="soft"
+                      >
                         Gemini
                       </Chip>
-                      <Chip size="sm" variant="soft" className="bg-default-100 text-default-600 font-medium">
+                      <Chip
+                        className="bg-default-100 text-default-600 font-medium"
+                        size="sm"
+                        variant="soft"
+                      >
                         Google ADK
                       </Chip>
                     </div>
@@ -430,28 +497,40 @@ export default function MarketplacePage() {
                     {/* Footer Actions */}
                     <div className="flex justify-between items-center mt-auto pt-3 border-t border-divider/50">
                       <Button
+                        className="font-bold text-default-600 hover:text-primary transition-colors px-0 min-w-0 h-auto bg-transparent hover:bg-transparent"
                         size="sm"
                         variant="ghost"
-                        className="font-bold text-default-600 hover:text-primary transition-colors px-0 min-w-0 h-auto bg-transparent hover:bg-transparent"
                         onClick={() => {
-                          if (agent.cloud_run_url) window.open(agent.cloud_run_url, "_blank");
+                          if (agent.cloud_run_url)
+                            window.open(agent.cloud_run_url, "_blank");
                         }}
                       >
                         View Details
                       </Button>
                       <Button
+                        className={`font-bold transition-all duration-300 px-6 ${
+                          justAdded === agent.id ||
+                          userAgentUrls.has(agent.cloud_run_url)
+                            ? "bg-success/10 text-success border-success/20"
+                            : "bg-primary text-primary-foreground shadow-md hover:shadow-primary/20"
+                        }`}
+                        isDisabled={
+                          addingToMyAgents === agent.id ||
+                          userAgentUrls.has(agent.cloud_run_url)
+                        }
                         size="md"
-                        variant={justAdded === agent.id || userAgentUrls.has(agent.cloud_run_url) ? "ghost" : "primary"}
-                        className={`font-bold transition-all duration-300 px-6 ${justAdded === agent.id || userAgentUrls.has(agent.cloud_run_url)
-                          ? "bg-success/10 text-success border-success/20"
-                          : "bg-primary text-primary-foreground shadow-md hover:shadow-primary/20"
-                          }`}
-                        isDisabled={addingToMyAgents === agent.id || userAgentUrls.has(agent.cloud_run_url)}
+                        variant={
+                          justAdded === agent.id ||
+                          userAgentUrls.has(agent.cloud_run_url)
+                            ? "ghost"
+                            : "primary"
+                        }
                         onClick={() => handleAddToMyAgents(agent)}
                       >
                         {addingToMyAgents === agent.id ? (
-                          <Spinner size="sm" color="current" />
-                        ) : (justAdded === agent.id || userAgentUrls.has(agent.cloud_run_url)) ? (
+                          <Spinner color="current" size="sm" />
+                        ) : justAdded === agent.id ||
+                          userAgentUrls.has(agent.cloud_run_url) ? (
                           "Added ✓"
                         ) : (
                           "Add Agent"
@@ -470,28 +549,29 @@ export default function MarketplacePage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <form
-            className="bg-background border border-divider rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left"
             autoComplete="off"
+            className="bg-background border border-divider rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left"
             onSubmit={(e) => e.preventDefault()}
           >
-
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-divider">
               <div className="flex flex-col gap-1">
                 <h2 className="text-xl font-bold text-default-900">
-                  {prefillAgent ? `Build variant: ${prefillAgent.name}` : "Build Agent"}
+                  {prefillAgent
+                    ? `Build variant: ${prefillAgent.name}`
+                    : "Build Agent"}
                 </h2>
                 <p className="text-sm text-default-500">
                   Fork → Configure → Deploy to Cloud Run via GitHub Actions
                 </p>
               </div>
               <Button
+                className="min-w-0 p-2 rounded-full hover:bg-default-100 transition-colors"
+                isDisabled={building}
+                size="sm"
                 type="button"
                 variant="ghost"
-                size="sm"
                 onClick={closeWizard}
-                isDisabled={building}
-                className="min-w-0 p-2 rounded-full hover:bg-default-100 transition-colors"
               >
                 ✕
               </Button>
@@ -504,11 +584,9 @@ export default function MarketplacePage() {
 
             {/* Step Content */}
             <div className="flex-grow overflow-y-auto px-6 pb-4 space-y-5">
-
               {/* ─── Step 0: Configure ─────────────────────────────────────── */}
               {step === 0 && (
                 <>
-
                   <div className="flex flex-col gap-2">
                     <label
                       className="text-sm font-bold text-default-700"
@@ -517,16 +595,16 @@ export default function MarketplacePage() {
                       Agent Name <span className="text-red-400">*</span>
                     </label>
                     <input
-                      id="build-agent-name"
-                      name="build-agent-display-name"
-                      type="text"
+                      data-1p-ignore
                       autoComplete="off"
                       autoCorrect="off"
-                      spellCheck={false}
-                      data-lpignore="true"
-                      data-1p-ignore
-                      placeholder="e.g. Research Assistant"
                       className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors"
+                      data-lpignore="true"
+                      id="build-agent-name"
+                      name="build-agent-display-name"
+                      placeholder="e.g. Research Assistant"
+                      spellCheck={false}
+                      type="text"
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
                     />
@@ -540,16 +618,16 @@ export default function MarketplacePage() {
                       Description
                     </label>
                     <input
-                      id="build-agent-summary"
-                      name="build-agent-summary"
-                      type="text"
+                      data-1p-ignore
                       autoComplete="off"
                       autoCorrect="off"
-                      spellCheck={false}
-                      data-lpignore="true"
-                      data-1p-ignore
-                      placeholder="Short description of what this agent does"
                       className="w-full bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors"
+                      data-lpignore="true"
+                      id="build-agent-summary"
+                      name="build-agent-summary"
+                      placeholder="Short description of what this agent does"
+                      spellCheck={false}
+                      type="text"
                       value={customDescription}
                       onChange={(e) => setCustomDescription(e.target.value)}
                     />
@@ -563,15 +641,15 @@ export default function MarketplacePage() {
                       Instructions <span className="text-red-400">*</span>
                     </label>
                     <textarea
-                      id="build-agent-instructions"
-                      name="build-agent-instructions"
+                      data-1p-ignore
                       autoComplete="off"
                       autoCorrect="off"
-                      spellCheck={false}
-                      data-lpignore="true"
-                      data-1p-ignore
-                      placeholder="How should this agent behave? What are its goals?"
                       className="w-full min-h-[120px] bg-divider/10 border border-divider rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 transition-colors resize-none"
+                      data-lpignore="true"
+                      id="build-agent-instructions"
+                      name="build-agent-instructions"
+                      placeholder="How should this agent behave? What are its goals?"
+                      spellCheck={false}
                       value={customInstructions}
                       onChange={(e) => setCustomInstructions(e.target.value)}
                     />
@@ -584,12 +662,23 @@ export default function MarketplacePage() {
                 <>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-default-500">
-                      Select the MCP tools this agent can use. Each will be added as a{" "}
-                      <code className="bg-default-100 px-1 rounded text-xs">McpToolset</code> in{" "}
-                      <code className="bg-default-100 px-1 rounded text-xs">agent.py</code>.
+                      Select the MCP tools this agent can use. Each will be
+                      added as a{" "}
+                      <code className="bg-default-100 px-1 rounded text-xs">
+                        McpToolset
+                      </code>{" "}
+                      in{" "}
+                      <code className="bg-default-100 px-1 rounded text-xs">
+                        agent.py
+                      </code>
+                      .
                     </p>
                     {selectedEndpoints.length > 0 && (
-                      <Chip size="sm" variant="soft" className="bg-primary/10 text-primary font-bold">
+                      <Chip
+                        className="bg-primary/10 text-primary font-bold"
+                        size="sm"
+                        variant="soft"
+                      >
                         {selectedEndpoints.length} selected
                       </Chip>
                     )}
@@ -603,29 +692,40 @@ export default function MarketplacePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {presets.map((preset) => {
                         const selected = selectedEndpoints.includes(preset.url);
+
                         return (
                           <div
                             key={preset.url}
-                            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${selected
-                              ? "bg-primary/5 border-primary shadow-sm"
-                              : "bg-surface border-divider hover:border-default-400"
-                              }`}
+                            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+                              selected
+                                ? "bg-primary/5 border-primary shadow-sm"
+                                : "bg-surface border-divider hover:border-default-400"
+                            }`}
                             onClick={() => {
                               setSelectedEndpoints((prev) =>
                                 prev.includes(preset.url)
                                   ? prev.filter((u) => u !== preset.url)
-                                  : [...prev, preset.url]
+                                  : [...prev, preset.url],
                               );
                             }}
                           >
                             <div
-                              className={`mt-0.5 w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-default-400"
-                                }`}
+                              className={`mt-0.5 w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${
+                                selected
+                                  ? "bg-primary border-primary"
+                                  : "border-default-400"
+                              }`}
                             >
-                              {selected && <span className="text-[10px] text-primary-foreground font-bold">✓</span>}
+                              {selected && (
+                                <span className="text-[10px] text-primary-foreground font-bold">
+                                  ✓
+                                </span>
+                              )}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="text-sm font-bold truncate">{preset.name}</span>
+                              <span className="text-sm font-bold truncate">
+                                {preset.name}
+                              </span>
                               {preset.description && (
                                 <span className="text-[11px] text-default-500 mt-0.5 line-clamp-2">
                                   {preset.description}
@@ -651,7 +751,11 @@ export default function MarketplacePage() {
                       {/* Preview code */}
                       <div className="flex flex-col gap-2">
                         <label className="text-sm font-bold text-default-700">
-                          Generated <code className="bg-default-100 px-1 rounded">agent.py</code> preview
+                          Generated{" "}
+                          <code className="bg-default-100 px-1 rounded">
+                            agent.py
+                          </code>{" "}
+                          preview
                         </label>
                         <pre className="bg-default-900 text-green-400 text-[11px] rounded-xl p-4 overflow-x-auto leading-relaxed">
                           {`from google.adk.agents.llm_agent import Agent
@@ -665,14 +769,20 @@ root_agent = Agent(
     instruction="""
         ${customInstructions.trim().slice(0, 120)}${customInstructions.length > 120 ? "..." : ""}
     """,
-    tools=[${selectedEndpoints.length === 0
-                              ? "\n        # No MCPs selected"
-                              : selectedEndpoints.map(u => `\n        McpToolset(connection_params=StreamableHTTPConnectionParams(url="${u}")),`).join("")}
+    tools=[${
+      selectedEndpoints.length === 0
+        ? "\n        # No MCPs selected"
+        : selectedEndpoints
+            .map(
+              (u) =>
+                `\n        McpToolset(connection_params=StreamableHTTPConnectionParams(url="${u}")),`,
+            )
+            .join("")
+    }
     ],
 )`}
                         </pre>
                       </div>
-
 
                       {/* Log */}
                       {buildLog.length > 0 && <StatusLog items={buildLog} />}
@@ -680,27 +790,34 @@ root_agent = Agent(
                   ) : buildResult.error ? (
                     <div className="flex flex-col gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
                       <p className="font-bold text-red-600">Build failed</p>
-                      <p className="text-sm text-red-500">{buildResult.error}</p>
+                      <p className="text-sm text-red-500">
+                        {buildResult.error}
+                      </p>
                       <StatusLog items={buildLog} />
                     </div>
                   ) : (
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col items-center gap-2 py-4">
                         <span className="text-5xl">🚀</span>
-                        <p className="text-xl font-bold text-default-900">Agent Built!</p>
+                        <p className="text-xl font-bold text-default-900">
+                          Agent Built!
+                        </p>
                         <p className="text-sm text-default-500 text-center">
-                          Your GitHub repo was created and is now being deployed to Cloud Run via GitHub Actions.
+                          Your GitHub repo was created and is now being deployed
+                          to Cloud Run via GitHub Actions.
                         </p>
                       </div>
 
                       <div className="flex flex-col gap-2">
-
                         <div className="flex items-center gap-3 p-3 bg-default-50 border border-divider rounded-xl">
                           <span className="text-2xl">☁️</span>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-bold">Cloud Run deploying...</span>
+                            <span className="text-sm font-bold">
+                              Cloud Run deploying...
+                            </span>
                             <span className="text-xs text-default-400">
-                              The Agent is getting deployed to cloud run wait for few minutes.
+                              The Agent is getting deployed to cloud run wait
+                              for few minutes.
                             </span>
                           </div>
                         </div>
@@ -716,14 +833,14 @@ root_agent = Agent(
             {/* Modal Footer */}
             <div className="p-6 border-t border-divider bg-background/50 flex justify-between items-center gap-3">
               <Button
+                className="font-medium hover:bg-default-100 transition-colors"
+                isDisabled={building}
                 type="button"
                 variant="ghost"
                 onClick={() => {
                   if (step === 0) closeWizard();
                   else setStep((s) => s - 1);
                 }}
-                isDisabled={building}
-                className="font-medium hover:bg-default-100 transition-colors"
               >
                 {step === 0 ? "Cancel" : "← Back"}
               </Button>
@@ -731,9 +848,9 @@ root_agent = Agent(
               <div className="flex items-center gap-3">
                 {step < 2 && (
                   <Button
-                    type="button"
                     className="font-bold min-w-[120px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                     isDisabled={!canAdvanceStep()}
+                    type="button"
                     onClick={() => setStep((s) => s + 1)}
                   >
                     Next →
@@ -742,14 +859,14 @@ root_agent = Agent(
 
                 {step === 2 && !buildResult && (
                   <Button
-                    type="button"
                     className="font-bold min-w-[140px] h-10 bg-primary text-primary-foreground shadow-sm hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                     isDisabled={building}
+                    type="button"
                     onClick={handleBuild}
                   >
                     {building ? (
                       <span className="flex items-center gap-2">
-                        <Spinner size="sm" color="current" /> Building...
+                        <Spinner color="current" size="sm" /> Building...
                       </span>
                     ) : (
                       "🚀 Build & Deploy"
@@ -759,8 +876,8 @@ root_agent = Agent(
 
                 {step === 2 && buildResult && !buildResult.error && (
                   <Button
-                    type="button"
                     className="font-bold h-10 px-6 bg-primary text-primary-foreground"
+                    type="button"
                     onClick={closeWizard}
                   >
                     Done ✓
@@ -769,8 +886,8 @@ root_agent = Agent(
 
                 {step === 2 && buildResult?.error && (
                   <Button
-                    type="button"
                     className="font-bold h-10 px-6 bg-primary text-primary-foreground"
+                    type="button"
                     onClick={() => {
                       setBuildResult(null);
                       setBuildLog([]);

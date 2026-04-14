@@ -52,7 +52,7 @@ export const Body = tv({
 });
 
 export const Footer = tv({
-  base: "flex w-full shrink-0 flex-col border-t border-[var(--separator)] bg-[var(--sidebar-bg)] px-2 pb-3 pt-3",
+  base: "flex w-full shrink-0 flex-col border-t border-[var(--separator)] bg-[#fbfdff] px-2 pb-3 pt-3 dark:bg-[var(--sidebar-bg)]",
   variants: {
     rail: {
       true: "items-center justify-center px-0.5 pb-2 pt-3",

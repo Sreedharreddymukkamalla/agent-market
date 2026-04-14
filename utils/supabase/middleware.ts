@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
@@ -49,7 +49,9 @@ export async function updateSession(request: NextRequest) {
   // REDIRECTS FOR ROOT ACCESSIBILITY
   if (request.nextUrl.pathname === "/") {
     const url = request.nextUrl.clone();
+
     url.pathname = "/dashboard/agent-aim";
+
     return NextResponse.redirect(url);
   }
 
@@ -57,7 +59,9 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     if (request.nextUrl.pathname.startsWith("/login")) {
       const url = request.nextUrl.clone();
+
       url.pathname = "/dashboard/agent-aim";
+
       return NextResponse.redirect(url);
     }
   }
@@ -65,7 +69,9 @@ export async function updateSession(request: NextRequest) {
   // REDIRECTS FOR UNAUTHENTICATED USERS
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
+
     url.pathname = "/login";
+
     return NextResponse.redirect(url);
   }
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import clsx from "clsx";
 import { Popover } from "@heroui/react";
-import { useSidebarContext } from "../layout-context";
 import { usePathname } from "next/navigation";
+
+import { useSidebarContext } from "../layout-context";
 
 interface Props {
   title: string;
@@ -14,19 +15,19 @@ interface Props {
 export function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg
-      width="16"
+      className={className}
+      fill="none"
       height="16"
       viewBox="0 0 24 24"
-      fill="none"
-      className={className}
+      width="16"
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
         d="M6 9L12 15L18 9"
         stroke="currentColor"
-        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        strokeWidth="2"
       />
     </svg>
   );
@@ -41,12 +42,13 @@ export const SidebarCollapse = ({
   const { sidebarOpen, isMdUp } = useSidebarContext();
   const pathname = usePathname();
   const compact = isMdUp && !sidebarOpen;
-  
+
   // Check if any child is active to auto-expand
   const hasActiveChild = React.Children.toArray(children).some((child) => {
     if (React.isValidElement(child)) {
       return (child.props as any).isActive === true;
     }
+
     return false;
   });
 
@@ -74,9 +76,9 @@ export const SidebarCollapse = ({
             </span>
           </Popover.Trigger>
           <Popover.Content
-            placement="right top"
-            offset={10}
             className="rounded-2xl border border-divider bg-[var(--overlay)] p-1.5 shadow-[var(--overlay-shadow)] outline-none"
+            offset={10}
+            placement="right top"
           >
             <Popover.Dialog className="max-h-[min(70dvh,24rem)] min-w-[13.5rem] overflow-y-auto outline-none">
               <Popover.Heading className="px-2 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -102,22 +104,22 @@ export const SidebarCollapse = ({
   return (
     <div className="flex w-full flex-col gap-1">
       <button
-        onClick={() => setIsOpen(!isOpen)}
         className={clsx(
           "flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-1 transition-all duration-150 outline-none select-none",
-          isOpen ? "text-default-900" : "text-default-600 hover:bg-[var(--sidebar-item-hover)]"
+          isOpen
+            ? "text-default-900"
+            : "text-default-600 hover:bg-[var(--sidebar-item-hover)]",
         )}
+        onClick={() => setIsOpen(!isOpen)}
       >
         <span className="flex shrink-0 items-center justify-center [&_svg]:size-4 text-default-500">
           {icon}
         </span>
-        <span className="flex-1 text-left font-medium text-sm">
-          {title}
-        </span>
-        <ChevronDownIcon 
+        <span className="flex-1 text-left font-medium text-sm">{title}</span>
+        <ChevronDownIcon
           className={clsx(
             "transition-transform duration-200 text-default-400 size-4",
-            isOpen ? "rotate-0" : "rotate-[-90deg]"
+            isOpen ? "rotate-0" : "rotate-[-90deg]",
           )}
         />
       </button>
@@ -125,7 +127,7 @@ export const SidebarCollapse = ({
       <div
         className={clsx(
           "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out",
-          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
         <div className="overflow-hidden">

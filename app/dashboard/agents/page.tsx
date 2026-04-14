@@ -2,36 +2,46 @@
 
 import { Card, Button, Chip, Spinner, Tooltip } from "@heroui/react";
 import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
+
 import { RobotIcon } from "@/components/dashboard/icons";
 import { UserAgent } from "@/types/agent";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
 
 // ADK /run returns Event[]. Extract the last model text response.
 function extractReply(events: any[]): string {
   const modelEvents = events.filter(
-    (e) => e.content?.role === "model" && e.content?.parts?.length > 0
+    (e) => e.content?.role === "model" && e.content?.parts?.length > 0,
   );
+
   if (modelEvents.length === 0) return JSON.stringify(events);
   const last = modelEvents[modelEvents.length - 1];
+
   return last.content.parts
     .map((p: any) => p.text ?? "")
     .join("")
     .trim();
 }
 
-const IMAGE_REGEX = /(https?:\/\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(?:\?[^\s\)]*)?)|(https:\/\/storage\.googleapis\.com\/[^\s\)]+)/gi;
+const IMAGE_REGEX =
+  /(https?:\/\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(?:\?[^\s\)]*)?)|(https:\/\/storage\.googleapis\.com\/[^\s\)]+)/gi;
 
 function getImagesFromText(text: string): string[] {
   if (!text) return [];
   // Heal fragmented URLs: remove newlines that break a path
-  const healed = text.replace(/([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])\n\s*([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])/g, '$1$2');
+  const healed = text.replace(
+    /([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])\n\s*([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])/g,
+    "$1$2",
+  );
+
   return healed.match(IMAGE_REGEX) || [];
 }
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<(UserAgent & { checkingHealth?: boolean })[]>([]);
+  const [agents, setAgents] = useState<
+    (UserAgent & { checkingHealth?: boolean })[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
@@ -61,9 +71,11 @@ export default function AgentsPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       setUser(user);
       if (!user) {
         setLoading(false);
+
         return;
       }
 
@@ -76,8 +88,9 @@ export default function AgentsPage() {
 
       const fetchedAgents = (data || []).map((a: any) => ({
         ...a,
-        checkingHealth: !!a.cloud_run_url
+        checkingHealth: !!a.cloud_run_url,
       }));
+
       setAgents(fetchedAgents);
 
       fetchedAgents.forEach(async (agent) => {
@@ -88,11 +101,16 @@ export default function AgentsPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url: agent.cloud_run_url }),
           });
+
           if (res.ok) {
             const { status } = await res.json();
+
             setAgents((prev) =>
-              prev.map((a) => (a.id === agent.id ? { ...a, status, checkingHealth: false } : a))
+              prev.map((a) =>
+                a.id === agent.id ? { ...a, status, checkingHealth: false } : a,
+              ),
             );
+
             return;
           }
         } catch {
@@ -100,7 +118,9 @@ export default function AgentsPage() {
         }
 
         setAgents((prev) =>
-          prev.map((a) => (a.id === agent.id ? { ...a, checkingHealth: false } : a))
+          prev.map((a) =>
+            a.id === agent.id ? { ...a, checkingHealth: false } : a,
+          ),
         );
       });
     } catch (error) {
@@ -114,7 +134,7 @@ export default function AgentsPage() {
     setActiveAgent(agent);
     setChatHistory([]);
     setCurrentSessionId(
-      `session-${Math.random().toString(36).substring(2, 11)}`
+      `session-${Math.random().toString(36).substring(2, 11)}`,
     );
     setIsOpen(true);
   };
@@ -130,6 +150,7 @@ export default function AgentsPage() {
           text: "This agent has no Cloud Run URL configured. Please deploy it first.",
         },
       ]);
+
       return;
     }
 
@@ -164,8 +185,10 @@ export default function AgentsPage() {
             sessionId: currentSessionId,
           }),
         });
+
         if (!sessionRes.ok) {
           const { error } = await sessionRes.json();
+
           throw new Error(error ?? "Failed to create session");
         }
       }
@@ -186,16 +209,14 @@ export default function AgentsPage() {
 
       if (!runRes.ok) {
         const { error } = await runRes.json();
+
         throw new Error(error ?? "Agent request failed");
       }
 
       const { events } = await runRes.json();
       const agentReply = extractReply(events);
 
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "agent", text: agentReply },
-      ]);
+      setChatHistory((prev) => [...prev, { role: "agent", text: agentReply }]);
     } catch (error: any) {
       console.error("Chat error:", error);
       setChatHistory((prev) => [
@@ -213,7 +234,7 @@ export default function AgentsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Spinner size="lg" color="current" />
+        <Spinner color="current" size="lg" />
         <p className="text-default-500 animate-pulse">Loading your agents...</p>
       </div>
     );
@@ -234,22 +255,25 @@ export default function AgentsPage() {
             🔒
           </div>
           <div className="flex flex-col gap-2 max-w-md">
-            <h2 className="text-2xl font-bold text-default-900">Authentication Required</h2>
+            <h2 className="text-2xl font-bold text-default-900">
+              Authentication Required
+            </h2>
             <p className="text-default-500">
-              Please sign in or create an account to view and manage your personal AI agents.
+              Please sign in or create an account to view and manage your
+              personal AI agents.
             </p>
           </div>
           <div className="flex gap-4">
             <Button
-              variant="primary"
               className="font-bold px-8 h-12 shadow-lg shadow-primary/20"
+              variant="primary"
               onClick={() => router.push("/login")}
             >
               Sign In
             </Button>
             <Button
-              variant="secondary"
               className="font-bold px-8 h-12"
+              variant="secondary"
               onClick={() => router.push("/login?mode=signup")}
             >
               Sign Up
@@ -279,7 +303,9 @@ export default function AgentsPage() {
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className={`w-11 h-11 rounded-xl ${colorClass} flex items-center justify-center border border-current/10 shadow-inner group-hover:scale-105 transition-transform duration-300`}>
+                    <div
+                      className={`w-11 h-11 rounded-xl ${colorClass} flex items-center justify-center border border-current/10 shadow-inner group-hover:scale-105 transition-transform duration-300`}
+                    >
                       <RobotIcon size={24} />
                     </div>
                     <div className="flex flex-col min-w-0">
@@ -308,16 +334,23 @@ export default function AgentsPage() {
                       </span>
                       {agent.checkingHealth ? (
                         <div className="w-[80px] flex items-center gap-2 h-[28px]">
-                          <Spinner size="sm" color="current" />
-                          <span className="text-xs text-default-400">Checking</span>
+                          <Spinner color="current" size="sm" />
+                          <span className="text-xs text-default-400">
+                            Checking
+                          </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="relative flex h-2 w-2">
-                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${agent.status === "active" ? "bg-success" : "bg-warning"}`}></span>
-                            <span className={`relative inline-flex rounded-full h-2 w-2 ${agent.status === "active" ? "bg-success" : "bg-warning"}`}></span>
+                            <span
+                              className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${agent.status === "active" ? "bg-success" : "bg-warning"}`}
+                            />
+                            <span
+                              className={`relative inline-flex rounded-full h-2 w-2 ${agent.status === "active" ? "bg-success" : "bg-warning"}`}
+                            />
                           </span>
                           <Chip
+                            className="font-bold border-0 h-6"
                             color={
                               agent.status === "active"
                                 ? "success"
@@ -327,7 +360,6 @@ export default function AgentsPage() {
                             }
                             size="sm"
                             variant="soft"
-                            className="font-bold border-0 h-6"
                           >
                             {agent.status}
                           </Chip>
@@ -336,9 +368,9 @@ export default function AgentsPage() {
                     </div>
 
                     <Button
+                      className="font-bold px-6 h-9 shadow-md shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all ml-auto md:ml-0"
                       size="sm"
                       variant="primary"
-                      className="font-bold px-6 h-9 shadow-md shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all ml-auto md:ml-0"
                       onClick={() => handleRun(agent)}
                     >
                       Run Agent
@@ -374,10 +406,10 @@ export default function AgentsPage() {
                 </div>
               </div>
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsOpen(false)}
                 className="min-w-0 p-2 rounded-full hover:bg-default-100 transition-colors"
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsOpen(false)}
               >
                 ✕
               </Button>
@@ -399,26 +431,32 @@ export default function AgentsPage() {
                     className={`flex ${chat.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] p-4 rounded-2xl ${chat.role === "user"
-                        ? "bg-primary text-white rounded-tr-none shadow-md"
-                        : "bg-divider/30 text-default-900 rounded-tl-none border border-divider/50"
-                        }`}
+                      className={`max-w-[85%] p-4 rounded-2xl ${
+                        chat.role === "user"
+                          ? "bg-primary text-white rounded-tr-none shadow-md"
+                          : "bg-divider/30 text-default-900 rounded-tl-none border border-divider/50"
+                      }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
                         {chat.text}
                       </p>
                       {(() => {
                         const images = getImagesFromText(chat.text);
+
                         if (images.length === 0) return null;
+
                         return (
                           <div className="mt-3 flex flex-col gap-3">
                             {images.map((url, idx) => (
-                              <div key={idx} className="overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5 min-h-[40px] flex items-center justify-center">
+                              <div
+                                key={idx}
+                                className="overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5 min-h-[40px] flex items-center justify-center"
+                              >
                                 <img
-                                  src={url}
                                   alt="Generated content"
                                   className="max-w-full h-auto object-contain block hover:scale-[1.02] transition-transform duration-300"
                                   loading="lazy"
+                                  src={url}
                                 />
                               </div>
                             ))}
@@ -446,21 +484,21 @@ export default function AgentsPage() {
               <div className="flex w-full gap-3 items-center">
                 <input
                   className="flex-grow bg-divider/10 border border-divider rounded-xl px-5 py-3 text-sm outline-none focus:border-primary/60 transition-all shadow-inner disabled:opacity-50"
+                  disabled={isStreaming}
                   placeholder={`Chat with ${activeAgent?.name || "your agent"}...`}
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
                   onKeyDown={(e) =>
                     e.key === "Enter" && !isStreaming && sendMessage()
                   }
-                  disabled={isStreaming}
                 />
                 <Button
-                  variant="primary"
                   className="h-11 px-8 font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   isDisabled={isStreaming || !userInput.trim()}
+                  variant="primary"
                   onClick={sendMessage}
                 >
-                  {isStreaming ? <Spinner size="sm" color="current" /> : "Send"}
+                  {isStreaming ? <Spinner color="current" size="sm" /> : "Send"}
                 </Button>
               </div>
             </div>

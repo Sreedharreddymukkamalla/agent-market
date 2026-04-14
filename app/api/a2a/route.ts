@@ -22,12 +22,20 @@ export async function GET() {
     });
 
     const data = await res.json();
+
     return Response.json(data, { headers: CORS_HEADERS });
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {
-      return new Response("Agent discovery timed out", { status: 504, headers: CORS_HEADERS });
+      return new Response("Agent discovery timed out", {
+        status: 504,
+        headers: CORS_HEADERS,
+      });
     }
-    return new Response("Failed to reach remote agent", { status: 502, headers: CORS_HEADERS });
+
+    return new Response("Failed to reach remote agent", {
+      status: 502,
+      headers: CORS_HEADERS,
+    });
   } finally {
     clearTimeout(timeout);
   }
@@ -37,21 +45,28 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
 
   const jsonBody = (() => {
-    try { return JSON.parse(body); } catch { return {}; }
+    try {
+      return JSON.parse(body);
+    } catch {
+      return {};
+    }
   })();
 
   const isStream = jsonBody?.method === "message/stream";
 
   const controller = new AbortController();
   // longer timeout for streaming responses
-  const timeout = setTimeout(() => controller.abort(), isStream ? 120000 : 30000);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    isStream ? 120000 : 30000,
+  );
 
   try {
     const upstream = await fetch(`${REMOTE_AGENT}/anime/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": isStream ? "text/event-stream" : "application/json",
+        Accept: isStream ? "text/event-stream" : "application/json",
       },
       body,
       signal: controller.signal,
@@ -59,6 +74,7 @@ export async function POST(req: NextRequest) {
 
     if (!upstream.ok) {
       const err = await upstream.text();
+
       return new Response(err, {
         status: upstream.status,
         statusText: upstream.statusText,
@@ -76,9 +92,11 @@ export async function POST(req: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           const reader = upstream.body!.getReader();
+
           try {
             while (true) {
               const { value, done } = await reader.read();
+
               if (done) break;
               controller.enqueue(value);
             }
@@ -95,14 +113,16 @@ export async function POST(req: NextRequest) {
         headers: {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache, no-transform",
-          "Connection": "keep-alive",
+          Connection: "keep-alive",
           "X-Accel-Buffering": "no",
           ...CORS_HEADERS,
         },
       });
     }
 
-    const contentType = upstream.headers.get("Content-Type") || "application/json";
+    const contentType =
+      upstream.headers.get("Content-Type") || "application/json";
+
     return new Response(await upstream.text(), {
       status: upstream.status,
       headers: {
@@ -112,9 +132,16 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {
-      return new Response("Request timed out", { status: 504, headers: CORS_HEADERS });
+      return new Response("Request timed out", {
+        status: 504,
+        headers: CORS_HEADERS,
+      });
     }
-    return new Response("Failed to reach remote agent", { status: 502, headers: CORS_HEADERS });
+
+    return new Response("Failed to reach remote agent", {
+      status: 502,
+      headers: CORS_HEADERS,
+    });
   } finally {
     clearTimeout(timeout);
   }

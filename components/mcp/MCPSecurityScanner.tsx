@@ -20,7 +20,10 @@ function severityBorder(fgVar: string, opacityPercent: string): string {
 function severityVars(sev: string): { fg: string; bg: string } {
   switch (sev) {
     case "CRITICAL":
-      return { fg: "var(--severity-critical)", bg: "var(--severity-bg-critical)" };
+      return {
+        fg: "var(--severity-critical)",
+        bg: "var(--severity-bg-critical)",
+      };
     case "HIGH":
       return { fg: "var(--severity-high)", bg: "var(--severity-bg-high)" };
     case "MEDIUM":
@@ -34,16 +37,31 @@ function severityVars(sev: string): { fg: string; bg: string } {
   }
 }
 
-function scoreAppearance(score: number | null): { color: string; border: string } {
-  if (score === null)
-    return { color: "var(--muted)", border: "var(--border)" };
+function scoreAppearance(score: number | null): {
+  color: string;
+  border: string;
+} {
+  if (score === null) return { color: "var(--muted)", border: "var(--border)" };
   if (score >= 80)
-    return { color: "var(--success)", border: "color-mix(in oklch, var(--success) 35%, transparent)" };
+    return {
+      color: "var(--success)",
+      border: "color-mix(in oklch, var(--success) 35%, transparent)",
+    };
   if (score >= 50)
-    return { color: "var(--warning)", border: "color-mix(in oklch, var(--warning) 35%, transparent)" };
+    return {
+      color: "var(--warning)",
+      border: "color-mix(in oklch, var(--warning) 35%, transparent)",
+    };
   if (score >= 25)
-    return { color: "var(--tool-orange)", border: "color-mix(in oklch, var(--tool-orange) 35%, transparent)" };
-  return { color: "var(--danger)", border: "color-mix(in oklch, var(--danger) 35%, transparent)" };
+    return {
+      color: "var(--tool-orange)",
+      border: "color-mix(in oklch, var(--tool-orange) 35%, transparent)",
+    };
+
+  return {
+    color: "var(--danger)",
+    border: "color-mix(in oklch, var(--danger) 35%, transparent)",
+  };
 }
 
 function scoreLabelText(score: number | null): string {
@@ -51,6 +69,7 @@ function scoreLabelText(score: number | null): string {
   if (score >= 80) return "SAFE";
   if (score >= 50) return "CAUTION";
   if (score >= 25) return "RISKY";
+
   return "DANGEROUS";
 }
 
@@ -80,6 +99,7 @@ export default function MCPSecurityScanner({
         body: JSON.stringify({ url, token: authToken }),
       });
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error || "Scan failed");
       setResults(data);
     } catch (e: any) {
@@ -95,6 +115,7 @@ export default function MCPSecurityScanner({
         if (f.severity === "HIGH") return acc - 15;
         if (f.severity === "MEDIUM") return acc - 8;
         if (f.severity === "LOW") return acc - 3;
+
         return acc;
       }, 100)
     : null;
@@ -119,13 +140,16 @@ export default function MCPSecurityScanner({
     >
       <div className="flex items-center justify-between gap-4 border-b border-divider bg-[var(--surface-secondary)] px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="text-2xl leading-none" aria-hidden>
+          <span aria-hidden className="text-2xl leading-none">
             🛡
           </span>
           <div className="min-w-0">
-            <div className="text-sm font-bold text-foreground">Security Scanner</div>
+            <div className="text-sm font-bold text-foreground">
+              Security Scanner
+            </div>
             <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-              Checks for tool poisoning, prompt injection &amp; misconfigurations
+              Checks for tool poisoning, prompt injection &amp;
+              misconfigurations
             </p>
           </div>
         </div>
@@ -151,42 +175,42 @@ export default function MCPSecurityScanner({
       </div>
 
       <form
-        className="mcp-scanner-controls flex flex-wrap items-center gap-2 border-b border-divider bg-[var(--surface-secondary)] px-5 py-3"
         autoComplete="off"
+        className="mcp-scanner-controls flex flex-wrap items-center gap-2 border-b border-divider bg-[var(--surface-secondary)] px-5 py-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!scanning && url.trim()) void scan();
         }}
       >
         <input
-          className={clsx(inputCls, "min-w-[12rem] flex-1")}
-          type="text"
-          inputMode="url"
-          name="mcp-scan-endpoint"
-          id="mcp-scan-endpoint"
           autoComplete="url"
           autoCorrect="off"
-          spellCheck={false}
+          className={clsx(inputCls, "min-w-[12rem] flex-1")}
+          id="mcp-scan-endpoint"
+          inputMode="url"
+          name="mcp-scan-endpoint"
           placeholder="https://your-mcp-server.com/mcp"
+          spellCheck={false}
+          type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
         <input
-          className={clsx(inputCls, "w-full sm:w-44")}
-          type="password"
-          name="mcp-scan-authorization"
-          id="mcp-scan-authorization"
           autoComplete="new-password"
+          className={clsx(inputCls, "w-full sm:w-44")}
+          id="mcp-scan-authorization"
+          name="mcp-scan-authorization"
           placeholder="Token (optional)"
+          type="password"
           value={authToken}
           onChange={(e) => setAuthToken(e.target.value)}
         />
         <Button
-          type="submit"
-          variant="danger"
-          size="sm"
           className="shrink-0 font-bold"
           isDisabled={scanning || !url.trim()}
+          size="sm"
+          type="submit"
+          variant="danger"
         >
           {scanning ? (
             <span className="inline-flex items-center gap-2">
@@ -228,8 +252,10 @@ export default function MCPSecurityScanner({
               const count = results.findings.filter(
                 (f: any) => f.severity === sev,
               ).length;
+
               if (count === 0) return null;
               const { fg, bg } = severityVars(sev);
+
               return (
                 <div
                   key={sev}
@@ -254,6 +280,7 @@ export default function MCPSecurityScanner({
           <div className="flex flex-col gap-2.5">
             {results.findings.map((f: any, i: number) => {
               const { fg, bg } = severityVars(f.severity);
+
               return (
                 <div
                   key={i}
@@ -310,8 +337,8 @@ export default function MCPSecurityScanner({
           </div>
 
           <p className="border-t border-divider pt-3 text-center text-[10px] text-muted-foreground">
-            Scanned at {new Date(results.scannedAt).toLocaleString()} · This scan
-            analyses static metadata only. Runtime behaviour may differ.
+            Scanned at {new Date(results.scannedAt).toLocaleString()} · This
+            scan analyses static metadata only. Runtime behaviour may differ.
           </p>
         </div>
       ) : null}

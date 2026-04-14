@@ -14,7 +14,9 @@ export async function getAgentCard(): Promise<{
   version: string;
 }> {
   const res = await fetch(BASE, { cache: "no-store" });
+
   if (!res.ok) throw new Error(`Could not reach agent (${res.status})`);
+
   return res.json();
 }
 
@@ -23,7 +25,10 @@ export async function getAgentCard(): Promise<{
  * Handles \n, \r\n, and \r line endings per the SSE spec.
  * Returns { events, remainder } where remainder is any incomplete trailing data.
  */
-function parseSSEChunk(buf: string): { dataLines: string[]; remainder: string } {
+function parseSSEChunk(buf: string): {
+  dataLines: string[];
+  remainder: string;
+} {
   // Normalize line endings
   const normalized = buf.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
@@ -34,6 +39,7 @@ function parseSSEChunk(buf: string): { dataLines: string[]; remainder: string } 
   const remainder = eventBlocks.pop() ?? "";
 
   const dataLines: string[] = [];
+
   for (const block of eventBlocks) {
     for (const line of block.split("\n")) {
       if (line.startsWith("data:")) {
@@ -52,7 +58,7 @@ function parseSSEChunk(buf: string): { dataLines: string[]; remainder: string } 
  */
 export async function* streamMessage(
   text: string,
-  contextId: string
+  contextId: string,
 ): AsyncGenerator<{ text?: string; image?: string }> {
   const res = await fetch(BASE, {
     method: "POST",
@@ -81,6 +87,7 @@ export async function* streamMessage(
 
   if (!res.ok) {
     const errText = await res.text().catch(() => res.statusText);
+
     console.error("[A2A] error body:", errText);
     throw new Error(`Agent error ${res.status}: ${errText}`);
   }
@@ -92,25 +99,33 @@ export async function* streamMessage(
 
   while (true) {
     const { value, done } = await reader.read();
-    if (done) { console.log("[A2A] stream done, total chunks:", chunkCount); break; }
+
+    if (done) {
+      console.log("[A2A] stream done, total chunks:", chunkCount);
+      break;
+    }
 
     const raw = decoder.decode(value, { stream: true });
+
     console.log("[A2A] raw chunk:", JSON.stringify(raw)); // see exact bytes
     buf += raw;
 
     const normalized = buf.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     const blocks = normalized.split("\n\n");
+
     buf = blocks.pop() ?? "";
 
     for (const block of blocks) {
       for (const line of block.split("\n")) {
         if (!line.startsWith("data:")) continue;
         const data = line.slice(5).trim();
+
         console.log("[A2A] data line:", data);
 
         if (!data || data === "[DONE]") continue;
         try {
           const evt = JSON.parse(data);
+
           console.log("[A2A] parsed event:", JSON.stringify(evt, null, 2));
 
           const parts =

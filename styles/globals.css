@@ -52,8 +52,8 @@
     /* Sidebar (~#f8f9fa / #e8eaed — AI Studio–style rail) */
     --sidebar-bg: oklch(0.966 0.008 87);
     --sidebar-border: oklch(0.92 0.01 87);
-    --sidebar-item-hover: oklch(0.945 0.01 87);
-    --sidebar-item-active: oklch(0.92 0.01 87);
+    --sidebar-item-hover: #eef6ff;
+    --sidebar-item-active: #eef6ff;
     --sidebar-fg-active: var(--text-primary);
     /* ChatGPT-style profile chip (initials) */
     --sidebar-user-avatar-bg: oklch(0.52 0.11 195);
