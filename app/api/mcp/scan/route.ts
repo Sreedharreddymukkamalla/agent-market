@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   checkRugPull,
   checkCrossOriginShadowing,
@@ -18,35 +19,59 @@ import {
 } from "@/lib/mcp-security-checks-extended";
 
 const INJECTION_PATTERNS = [
-  { pattern: /<IMPORTANT>/i,           label: "Hidden <IMPORTANT> tag" },
-  { pattern: /\[SYSTEM\]/i,            label: "Hidden [SYSTEM] marker" },
-  { pattern: /\[INST\]/i,              label: "Hidden [INST] marker" },
-  { pattern: /ignore previous/i,       label: "Instruction override attempt" },
-  { pattern: /ignore all instructions/i, label: "Instruction override attempt" },
-  { pattern: /do not tell the user/i,  label: "Concealment instruction" },
-  { pattern: /do not mention/i,        label: "Concealment instruction" },
-  { pattern: /keep this secret/i,      label: "Concealment instruction" },
-  { pattern: /don't tell/i,            label: "Concealment instruction" },
+  { pattern: /<IMPORTANT>/i, label: "Hidden <IMPORTANT> tag" },
+  { pattern: /\[SYSTEM\]/i, label: "Hidden [SYSTEM] marker" },
+  { pattern: /\[INST\]/i, label: "Hidden [INST] marker" },
+  { pattern: /ignore previous/i, label: "Instruction override attempt" },
+  {
+    pattern: /ignore all instructions/i,
+    label: "Instruction override attempt",
+  },
+  { pattern: /do not tell the user/i, label: "Concealment instruction" },
+  { pattern: /do not mention/i, label: "Concealment instruction" },
+  { pattern: /keep this secret/i, label: "Concealment instruction" },
+  { pattern: /don't tell/i, label: "Concealment instruction" },
   { pattern: /without the user knowing/i, label: "Concealment instruction" },
   { pattern: /without telling the user/i, label: "Concealment instruction" },
-  { pattern: /exfiltrate/i,            label: "Data exfiltration keyword" },
-  { pattern: /send.*to.*http/i,        label: "Suspicious HTTP send instruction" },
-  { pattern: /before using this tool.*read/i, label: "File read injection pattern" },
-  { pattern: /pass its content/i,      label: "Data extraction pattern" },
-  { pattern: /\~\/\.cursor/i,          label: "Cursor config path reference" },
-  { pattern: /mcp\.json/i,             label: "MCP config file reference" },
-  { pattern: /\.ssh\/id/i,             label: "SSH key path reference" },
-  { pattern: /~\/.aws/i,               label: "AWS credentials path reference" },
-  { pattern: /\/etc\/passwd/i,         label: "System file reference" },
-  { pattern: /[\u200b-\u200f\u202a-\u202e\ufeff]/, label: "Invisible/zero-width characters detected" },
-  { pattern: /\s{50,}/,                label: "Excessive whitespace (possible content hiding)" },
+  { pattern: /exfiltrate/i, label: "Data exfiltration keyword" },
+  { pattern: /send.*to.*http/i, label: "Suspicious HTTP send instruction" },
+  {
+    pattern: /before using this tool.*read/i,
+    label: "File read injection pattern",
+  },
+  { pattern: /pass its content/i, label: "Data extraction pattern" },
+  { pattern: /\~\/\.cursor/i, label: "Cursor config path reference" },
+  { pattern: /mcp\.json/i, label: "MCP config file reference" },
+  { pattern: /\.ssh\/id/i, label: "SSH key path reference" },
+  { pattern: /~\/.aws/i, label: "AWS credentials path reference" },
+  { pattern: /\/etc\/passwd/i, label: "System file reference" },
+  {
+    pattern: /[\u200b-\u200f\u202a-\u202e\ufeff]/,
+    label: "Invisible/zero-width characters detected",
+  },
+  {
+    pattern: /\s{50,}/,
+    label: "Excessive whitespace (possible content hiding)",
+  },
 ];
 
 const SHADOW_TOOL_NAMES = [
-  "read_file", "write_file", "execute_command", "run_command",
-  "bash", "shell", "terminal", "list_directory", "delete_file",
-  "send_email", "send_message", "http_request", "fetch",
-  "memory_store", "memory_read", "browser_navigate",
+  "read_file",
+  "write_file",
+  "execute_command",
+  "run_command",
+  "bash",
+  "shell",
+  "terminal",
+  "list_directory",
+  "delete_file",
+  "send_email",
+  "send_message",
+  "http_request",
+  "fetch",
+  "memory_store",
+  "memory_read",
+  "browser_navigate",
 ];
 
 const DANGEROUS_CAPABILITIES = ["roots", "sampling"];
@@ -56,6 +81,7 @@ export async function POST(req: NextRequest) {
   const findings: any[] = [];
 
   const isTLS = url.startsWith("https://");
+
   if (!isTLS) {
     findings.push({
       check: "TLS",
@@ -64,10 +90,16 @@ export async function POST(req: NextRequest) {
       description:
         "The server URL uses plain HTTP. All MCP communication including auth tokens and tool results will be transmitted unencrypted.",
       evidence: url,
-      recommendation: "Ensure your MCP server is accessible over HTTPS before using in production.",
+      recommendation:
+        "Ensure your MCP server is accessible over HTTPS before using in production.",
     });
   } else {
-    findings.push({ check: "TLS", severity: "PASS", title: "HTTPS enabled", description: "Server uses TLS encryption." });
+    findings.push({
+      check: "TLS",
+      severity: "PASS",
+      title: "HTTPS enabled",
+      description: "Server uses TLS encryption.",
+    });
   }
 
   let tools: any[] = [];
@@ -77,18 +109,32 @@ export async function POST(req: NextRequest) {
 
   try {
     const headers: Record<string, string> = {};
+
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const transport = new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers } });
-    const client = new Client({ name: "agentaim-security-scanner", version: "1.0.0" });
+    const transport = new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers },
+    });
+    const client = new Client({
+      name: "agentaim-security-scanner",
+      version: "1.0.0",
+    });
+
     await client.connect(transport);
 
     serverInfo = client.getServerVersion?.();
 
     if (token) {
       try {
-        const unauthTransport = new StreamableHTTPClientTransport(new URL(url), {});
-        const unauthClient = new Client({ name: "agentaim-security-scanner", version: "1.0.0" });
+        const unauthTransport = new StreamableHTTPClientTransport(
+          new URL(url),
+          {},
+        );
+        const unauthClient = new Client({
+          name: "agentaim-security-scanner",
+          version: "1.0.0",
+        });
+
         await unauthClient.connect(unauthTransport);
         findings.push({
           check: "AUTH",
@@ -96,11 +142,17 @@ export async function POST(req: NextRequest) {
           title: "Server accepts unauthenticated connections",
           description:
             "Even though a token was provided, the server also responds to requests without any authentication. Anyone can connect to this server.",
-          recommendation: "Enforce authentication on all endpoints. Return 401 for unauthenticated requests.",
+          recommendation:
+            "Enforce authentication on all endpoints. Return 401 for unauthenticated requests.",
         });
         await unauthClient.close();
       } catch {
-        findings.push({ check: "AUTH", severity: "PASS", title: "Authentication enforced", description: "Server correctly rejects unauthenticated connections." });
+        findings.push({
+          check: "AUTH",
+          severity: "PASS",
+          title: "Authentication enforced",
+          description: "Server correctly rejects unauthenticated connections.",
+        });
       }
     } else {
       findings.push({
@@ -109,18 +161,36 @@ export async function POST(req: NextRequest) {
         title: "No authentication token provided",
         description:
           "No bearer token was supplied. If this server is public without auth, any client can connect and invoke tools.",
-        recommendation: "Use a bearer token to authenticate. Check if the server requires auth.",
+        recommendation:
+          "Use a bearer token to authenticate. Check if the server requires auth.",
       });
     }
 
-    try { const r = await client.listTools();     tools     = r.tools     || []; } catch {}
-    try { const r = await client.listResources();  resources = r.resources || []; } catch {}
-    try { const r = await client.listPrompts();    prompts   = r.prompts   || []; } catch {}
+    try {
+      const r = await client.listTools();
+
+      tools = r.tools || [];
+    } catch {}
+    try {
+      const r = await client.listResources();
+
+      resources = r.resources || [];
+    } catch {}
+    try {
+      const r = await client.listPrompts();
+
+      prompts = r.prompts || [];
+    } catch {}
 
     const poisonedTools: string[] = [];
+
     for (const tool of tools) {
-      const text = [ tool.description || "", JSON.stringify(tool.inputSchema || {}) ].join(" ");
+      const text = [
+        tool.description || "",
+        JSON.stringify(tool.inputSchema || {}),
+      ].join(" ");
       const hits: string[] = [];
+
       for (const { pattern, label } of INJECTION_PATTERNS) {
         if (pattern.test(text)) hits.push(label);
       }
@@ -140,25 +210,39 @@ export async function POST(req: NextRequest) {
     }
 
     if (tools.length > 0 && poisonedTools.length === 0) {
-      findings.push({ check: "TOOL_POISON", severity: "PASS", title: "No prompt injection patterns detected", description: `Scanned ${tools.length} tool description(s) — no known injection patterns found.` });
+      findings.push({
+        check: "TOOL_POISON",
+        severity: "PASS",
+        title: "No prompt injection patterns detected",
+        description: `Scanned ${tools.length} tool description(s) — no known injection patterns found.`,
+      });
     }
 
     for (const tool of tools) {
       const props = tool.inputSchema?.properties || {};
+
       for (const [paramName, paramSchema] of Object.entries(props) as any[]) {
         const desc = paramSchema?.description || "";
+
         if (desc.length > 500) {
           findings.push({
             check: "SCHEMA_ABUSE",
             severity: "HIGH",
             title: `Oversized parameter description in "${tool.name}.${paramName}"`,
-            description:
-              `Parameter descriptions should be brief. A ${desc.length}-character description is highly unusual and may be hiding injected instructions.`,
+            description: `Parameter descriptions should be brief. A ${desc.length}-character description is highly unusual and may be hiding injected instructions.`,
             evidence: desc.slice(0, 200) + "…",
-            recommendation: "Inspect the full description manually before using this tool.",
+            recommendation:
+              "Inspect the full description manually before using this tool.",
           });
         }
-        const suspicious = ["sidenote", "context_hint", "extra", "metadata_pass", "internal_note"];
+        const suspicious = [
+          "sidenote",
+          "context_hint",
+          "extra",
+          "metadata_pass",
+          "internal_note",
+        ];
+
         if (suspicious.includes(paramName.toLowerCase())) {
           findings.push({
             check: "SCHEMA_ABUSE",
@@ -166,13 +250,17 @@ export async function POST(req: NextRequest) {
             title: `Suspicious parameter name "${paramName}" in tool "${tool.name}"`,
             description:
               "This parameter name is commonly used in known tool poisoning proof-of-concept attacks to silently pass exfiltrated data.",
-            recommendation: "Do not invoke this tool. Review the server source code.",
+            recommendation:
+              "Do not invoke this tool. Review the server source code.",
           });
         }
       }
     }
 
-    const shadowHits = tools.filter((t) => SHADOW_TOOL_NAMES.includes(t.name.toLowerCase()));
+    const shadowHits = tools.filter((t) =>
+      SHADOW_TOOL_NAMES.includes(t.name.toLowerCase()),
+    );
+
     if (shadowHits.length > 0) {
       findings.push({
         check: "SHADOW_TOOLS",
@@ -188,6 +276,7 @@ export async function POST(req: NextRequest) {
 
     const caps = (serverInfo as any)?.capabilities || {};
     const dangerousCaps = DANGEROUS_CAPABILITIES.filter((c) => caps[c]);
+
     if (dangerousCaps.length > 0) {
       findings.push({
         check: "CAPABILITY",
@@ -195,7 +284,8 @@ export async function POST(req: NextRequest) {
         title: `Server exposes elevated capabilities: ${dangerousCaps.join(", ")}`,
         description:
           "These capability flags grant the server elevated access. 'roots' allows filesystem access; 'sampling' allows the server to invoke LLM calls itself.",
-        recommendation: "Only enable these capabilities for servers you fully trust and control.",
+        recommendation:
+          "Only enable these capabilities for servers you fully trust and control.",
       });
     }
 
@@ -226,7 +316,12 @@ export async function POST(req: NextRequest) {
       checkVersionLeakage(serverInfo, findings);
       await checkCORSHeaders(url, findings);
     } catch (ex: any) {
-      findings.push({ check: "EXTENDED_CHECKS_ERROR", severity: "INFO", title: "Extended checks error", description: ex?.message || String(ex) });
+      findings.push({
+        check: "EXTENDED_CHECKS_ERROR",
+        severity: "INFO",
+        title: "Extended checks error",
+        description: ex?.message || String(ex),
+      });
     }
 
     await client.close();

@@ -9,23 +9,15 @@ import {
   InputGroup,
   Avatar,
   Dropdown,
-  Selection,
 } from "@heroui/react";
 import NextLink from "next/link";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 
+import { createClient } from "@/utils/supabase/client";
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
-import {
-  TwitterIcon,
-  GithubIcon,
-  DiscordIcon,
-  HeartFilledIcon,
-  SearchIcon,
-  Logo,
-} from "@/components/icons";
+import { SearchIcon, Logo } from "@/components/icons";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -39,6 +31,7 @@ export const Navbar = () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       setUser(user);
     };
 
@@ -87,22 +80,27 @@ export const Navbar = () => {
             </p>
           </NextLink>
           <ul className="hidden lg:flex gap-4 ml-2">
-
             {siteConfig.navItems
-              .filter((item) => !(pathname?.startsWith("/login") && item.href === "/" || pathname?.startsWith("/signup") && item.href === "/"))
+              .filter(
+                (item) =>
+                  !(
+                    (pathname?.startsWith("/login") && item.href === "/") ||
+                    (pathname?.startsWith("/signup") && item.href === "/")
+                  ),
+              )
               .map((item) => (
-              <li key={item.href}>
-                <NextLink
-                  className={clsx(
-                    "text-foreground hover:text-muted-foreground transition-colors",
-                    "data-[active=true]:font-semibold",
-                  )}
-                  href={item.href}
-                >
-                  {item.label}
-                </NextLink>
-              </li>
-            ))}
+                <li key={item.href}>
+                  <NextLink
+                    className={clsx(
+                      "text-foreground hover:text-muted-foreground transition-colors",
+                      "data-[active=true]:font-semibold",
+                    )}
+                    href={item.href}
+                  >
+                    {item.label}
+                  </NextLink>
+                </li>
+              ))}
           </ul>
         </div>
 
@@ -128,7 +126,9 @@ export const Navbar = () => {
                   <Dropdown.Menu aria-label="Profile Actions">
                     <Dropdown.Item key="profile" className="h-14 gap-2">
                       <p className="font-semibold">Signed in as</p>
-                      <p className="font-semibold text-foreground">{user.email}</p>
+                      <p className="font-semibold text-foreground">
+                        {user.email}
+                      </p>
                     </Dropdown.Item>
                     <Dropdown.Item key="settings">My Settings</Dropdown.Item>
                     <Dropdown.Item key="help">Help & Feedback</Dropdown.Item>
@@ -144,13 +144,16 @@ export const Navbar = () => {
               </Dropdown>
             ) : (
               <div className="flex gap-2">
-                <NextLink href="/login" passHref legacyBehavior>
+                <NextLink legacyBehavior passHref href="/login">
                   <Button className="text-sm font-normal" variant="secondary">
                     Sign In
                   </Button>
                 </NextLink>
-                <NextLink href="/login?mode=signup" passHref legacyBehavior>
-                  <Button className="text-sm font-semibold rounded-xl" variant="primary">
+                <NextLink legacyBehavior passHref href="/login?mode=signup">
+                  <Button
+                    className="text-sm font-semibold rounded-xl"
+                    variant="primary"
+                  >
                     Sign Up
                   </Button>
                 </NextLink>
@@ -197,7 +200,6 @@ export const Navbar = () => {
         <div className="border-t border-divider sm:hidden">
           <div className="p-4">{searchInput}</div>
           <ul className="flex flex-col gap-2 px-4 pb-4">
-
             {siteConfig.navMenuItems.map((item, index) => (
               <li key={`${item.label}-${index}`}>
                 <Link

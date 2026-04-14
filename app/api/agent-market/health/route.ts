@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
-    
+
     if (!url) {
       return NextResponse.json({ status: "inactive" });
     }
@@ -16,6 +16,7 @@ export async function POST(req: Request) {
 
     if (res.ok) {
       const data = await res.json();
+
       if (data.status === "ok") {
         return NextResponse.json({ status: "active" });
       }

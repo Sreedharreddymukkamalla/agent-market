@@ -1,18 +1,9 @@
 "use client";
 
-import {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  KeyboardEvent,
-} from "react";
-import {
-  Button,
-  Spinner,
-  Tooltip,
-} from "@heroui/react";
+import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react";
+import { Button, Spinner, Tooltip } from "@heroui/react";
 import clsx from "clsx";
+
 import {
   streamMessage,
   getAgentCard,
@@ -33,8 +24,10 @@ import {
 function ThinkingDots() {
   return (
     <div className="flex items-center gap-2 px-1">
-      <Spinner size="sm" color="current" />
-      <span className="text-sm text-default-500 font-medium animate-pulse">Connecting to agent…</span>
+      <Spinner color="current" size="sm" />
+      <span className="text-sm text-default-500 font-medium animate-pulse">
+        Connecting to agent…
+      </span>
     </div>
   );
 }
@@ -42,12 +35,17 @@ function ThinkingDots() {
 const fmt = (d: Date) =>
   d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-const IMAGE_REGEX = /(https?:\/\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(?:\?[^\s\)]*)?)|(https:\/\/storage\.googleapis\.com\/[^\s\)]+)/gi;
+const IMAGE_REGEX =
+  /(https?:\/\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(?:\?[^\s\)]*)?)|(https:\/\/storage\.googleapis\.com\/[^\s\)]+)/gi;
 
 function getImagesFromText(text: string): string[] {
   if (!text) return [];
   // Heal fragmented URLs: remove newlines that break a path
-  const healed = text.replace(/([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])\n\s*([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])/g, '$1$2');
+  const healed = text.replace(
+    /([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])\n\s*([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])/g,
+    "$1$2",
+  );
+
   return healed.match(IMAGE_REGEX) || [];
 }
 
@@ -67,7 +65,9 @@ export default function A2AChat({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingState, setLoadingState] = useState<"idle" | "connecting" | "streaming">("idle");
+  const [loadingState, setLoadingState] = useState<
+    "idle" | "connecting" | "streaming"
+  >("idle");
   const [error, setError] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentDesc, setAgentDesc] = useState<string>("");
@@ -106,11 +106,14 @@ export default function A2AChat({
       setCopiedMessageId(id);
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(() => setCopiedMessageId(null), 2000);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
+
     if (!text || loading) return;
 
     setInput("");
@@ -138,6 +141,7 @@ export default function A2AChat({
 
     try {
       let isFirstChunk = true;
+
       for await (const chunk of streamMessage(text, contextId)) {
         if (isFirstChunk) {
           setLoadingState("streaming");
@@ -158,11 +162,12 @@ export default function A2AChat({
             }
 
             return { ...m, text: nextText, images: nextImages };
-          })
+          }),
         );
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
+
       setError(msg);
       setMessages((prev) => prev.filter((m) => m.id !== agentId));
     } finally {
@@ -182,10 +187,12 @@ export default function A2AChat({
   const canSend = !!input.trim() && !loading;
 
   return (
-    <div className={clsx(
-      "flex flex-col h-full min-h-[520px] bg-[var(--background)] rounded-2xl border border-divider overflow-hidden shadow-sm",
-      className
-    )}>
+    <div
+      className={clsx(
+        "flex flex-col h-full min-h-[520px] bg-[var(--background)] rounded-2xl border border-divider overflow-hidden shadow-sm",
+        className,
+      )}
+    >
       <style>{`
         .a2a-streaming::after {
           content: '▋';
@@ -197,16 +204,24 @@ export default function A2AChat({
 
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-divider bg-[var(--surface)]/50 backdrop-blur-md sticky top-0 z-10">
-        <div className={clsx(
-          "w-2 h-2 rounded-full",
-          agentStatus === "ready" ? "bg-success shadow-[0_0_8px_var(--heroui-success)]" : "bg-default-400"
-        )} />
+        <div
+          className={clsx(
+            "w-2 h-2 rounded-full",
+            agentStatus === "ready"
+              ? "bg-success shadow-[0_0_8px_var(--heroui-success)]"
+              : "bg-default-400",
+          )}
+        />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold tracking-tight text-foreground line-clamp-1">
             {agentName ?? "Agent"}
           </div>
           <div className="text-[11px] text-muted-foreground font-mono line-clamp-1 opacity-70">
-            {agentStatus === "connecting" ? "Connecting…" : agentStatus === "error" ? "Connection failed" : agentDesc}
+            {agentStatus === "connecting"
+              ? "Connecting…"
+              : agentStatus === "error"
+                ? "Connection failed"
+                : agentDesc}
           </div>
         </div>
         <div className="px-2 py-0.5 rounded-lg bg-default-100 text-[10px] font-mono font-bold text-default-600 border border-divider">
@@ -220,9 +235,13 @@ export default function A2AChat({
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20 animate-in fade-in zoom-in duration-500">
             <div className="text-5xl opacity-20">⬡</div>
             <div className="flex flex-col gap-1">
-              <h3 className="text-lg font-semibold text-foreground">Welcome to A2A</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                Welcome to A2A
+              </h3>
               <p className="text-sm text-muted-foreground max-w-[240px]">
-                {agentStatus === "ready" ? `Ask ${agentName} anything about their capabilities.` : "Connecting to remote agent…"}
+                {agentStatus === "ready"
+                  ? `Ask ${agentName} anything about their capabilities.`
+                  : "Connecting to remote agent…"}
               </p>
             </div>
           </div>
@@ -231,25 +250,35 @@ export default function A2AChat({
         {messages.map((m) => {
           const isAgent = m.role === "agent";
           const isStreaming = m.id === streamingId;
-          const showThinking = isAgent && isStreaming && loadingState === "connecting";
+          const showThinking =
+            isAgent && isStreaming && loadingState === "connecting";
           const copied = copiedMessageId === m.id;
 
           return (
-            <div key={m.id} className={clsx(
-              "group flex flex-col gap-2 transition-all duration-300",
-              isAgent ? "items-start" : "items-end"
-            )}>
+            <div
+              key={m.id}
+              className={clsx(
+                "group flex flex-col gap-2 transition-all duration-300",
+                isAgent ? "items-start" : "items-end",
+              )}
+            >
               <div className="flex items-end gap-2 max-w-[85%] group">
-                <div className={clsx(
-                  "relative px-4 py-3 rounded-2xl text-[14.5px] leading-relaxed shadow-sm transition-shadow group-hover:shadow-md",
-                  isAgent
-                    ? "bg-[var(--surface)] border border-divider text-foreground rounded-bl-none"
-                    : "bg-[var(--accent)] text-[var(--accent-foreground)] rounded-br-none"
-                )}>
-                  <div className={clsx(
-                    "whitespace-pre-wrap word-break-break-word",
-                    isStreaming && loadingState === "streaming" && "a2a-streaming"
-                  )}>
+                <div
+                  className={clsx(
+                    "relative px-4 py-3 rounded-2xl text-[14.5px] leading-relaxed shadow-sm transition-shadow group-hover:shadow-md",
+                    isAgent
+                      ? "bg-[var(--surface)] border border-divider text-foreground rounded-bl-none"
+                      : "bg-[var(--accent)] text-[var(--accent-foreground)] rounded-br-none",
+                  )}
+                >
+                  <div
+                    className={clsx(
+                      "whitespace-pre-wrap word-break-break-word",
+                      isStreaming &&
+                        loadingState === "streaming" &&
+                        "a2a-streaming",
+                    )}
+                  >
                     {showThinking ? (
                       <ThinkingDots />
                     ) : (
@@ -260,23 +289,31 @@ export default function A2AChat({
                         {/* 2. Render structured images and detected URLs */}
                         {(() => {
                           const detectedUrls = getImagesFromText(m.text);
-                          const combined = Array.from(new Set([...(m.images || []), ...detectedUrls]));
+                          const combined = Array.from(
+                            new Set([...(m.images || []), ...detectedUrls]),
+                          );
+
                           if (combined.length === 0) return null;
 
                           return (
                             <div className="mt-3 flex flex-col gap-3">
                               {combined.map((url, idx) => (
-                                <div key={idx} className="overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5 min-h-[40px] flex items-center justify-center">
+                                <div
+                                  key={idx}
+                                  className="overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5 min-h-[40px] flex items-center justify-center"
+                                >
                                   <img
-                                    src={url}
                                     alt="Chat attachment"
                                     className="max-w-full h-auto object-contain block hover:scale-[1.02] transition-transform duration-300"
                                     loading="lazy"
+                                    src={url}
                                     onError={(e) => {
                                       // If we're currently streaming this message, don't hide it yet
                                       // as the URL might be incomplete.
                                       if (!isStreaming) {
-                                        (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                                        (
+                                          e.target as HTMLImageElement
+                                        ).parentElement!.style.display = "none";
                                       }
                                     }}
                                   />
@@ -291,20 +328,26 @@ export default function A2AChat({
                 </div>
 
                 {/* Message Actions */}
-                <div className={clsx(
-                  "flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200",
-                  isAgent ? "order-last ml-1" : "order-first mr-1"
-                )}>
+                <div
+                  className={clsx(
+                    "flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                    isAgent ? "order-last ml-1" : "order-first mr-1",
+                  )}
+                >
                   <Tooltip>
                     <Tooltip.Trigger aria-label={copied ? "Copied" : "Copy"}>
                       <Button
                         isIconOnly
+                        className="text-muted-foreground hover:bg-default-100 rounded-full h-8 w-8"
                         size="sm"
                         variant="tertiary"
                         onPress={() => copyMessage(m.id, m.text)}
-                        className="text-muted-foreground hover:bg-default-100 rounded-full h-8 w-8"
                       >
-                        {copied ? <IconCheck className="w-3.5 h-3.5" /> : <IconCopy className="w-3.5 h-3.5" />}
+                        {copied ? (
+                          <IconCheck className="w-3.5 h-3.5" />
+                        ) : (
+                          <IconCopy className="w-3.5 h-3.5" />
+                        )}
                       </Button>
                     </Tooltip.Trigger>
                     <Tooltip.Content>
@@ -313,10 +356,12 @@ export default function A2AChat({
                   </Tooltip>
                 </div>
               </div>
-              <div className={clsx(
-                "text-[10px] font-mono text-muted-foreground opacity-50 px-1",
-                !isAgent && "text-right"
-              )}>
+              <div
+                className={clsx(
+                  "text-[10px] font-mono text-muted-foreground opacity-50 px-1",
+                  !isAgent && "text-right",
+                )}
+              >
                 {fmt(m.timestamp)}
               </div>
             </div>
@@ -338,24 +383,30 @@ export default function A2AChat({
         <div className="flex flex-col gap-2 p-2.5 bg-[var(--surface)] border border-divider rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] focus-within:border-default-400 focus-within:shadow-md transition-all duration-200">
           <textarea
             ref={taRef}
+            className="w-full bg-transparent px-3 py-1.5 text-[14.5px] text-foreground placeholder:text-muted-foreground focus:outline-none resize-none min-h-[38px] max-h-40 leading-relaxed font-medium"
+            disabled={loading}
+            placeholder={placeholder}
             rows={1}
             value={input}
-            placeholder={placeholder}
-            disabled={loading}
             onChange={(e) => {
               const el = e.target;
+
               el.style.height = "auto";
               el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
               setInput(el.value);
             }}
             onKeyDown={handleKey}
-            className="w-full bg-transparent px-3 py-1.5 text-[14.5px] text-foreground placeholder:text-muted-foreground focus:outline-none resize-none min-h-[38px] max-h-40 leading-relaxed font-medium"
           />
           <div className="flex items-center justify-between">
             <div className="flex gap-0.5">
               <Tooltip>
                 <Tooltip.Trigger aria-label="Add tools">
-                  <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
+                  <Button
+                    isIconOnly
+                    className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8"
+                    size="sm"
+                    variant="tertiary"
+                  >
                     <IconPlus className="w-4.5 h-4.5" />
                   </Button>
                 </Tooltip.Trigger>
@@ -363,7 +414,12 @@ export default function A2AChat({
               </Tooltip>
               <Tooltip>
                 <Tooltip.Trigger aria-label="Voice input">
-                  <Button isIconOnly size="sm" variant="tertiary" className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8">
+                  <Button
+                    isIconOnly
+                    className="text-muted-foreground/70 hover:text-foreground rounded-full h-8 w-8"
+                    size="sm"
+                    variant="tertiary"
+                  >
                     <IconMic className="w-4.5 h-4.5" />
                   </Button>
                 </Tooltip.Trigger>
@@ -378,16 +434,16 @@ export default function A2AChat({
               )}
               <Button
                 isIconOnly
-                size="sm"
-                isDisabled={!canSend}
-                onPress={handleSend}
+                aria-label="Send message"
                 className={clsx(
                   "rounded-full h-8 w-8 transition-all duration-200",
                   canSend
                     ? "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm hover:shadow-lg hover:scale-105 active:scale-95"
-                    : "bg-default-100 text-default-400"
+                    : "bg-default-100 text-default-400",
                 )}
-                aria-label="Send message"
+                isDisabled={!canSend}
+                size="sm"
+                onPress={handleSend}
               >
                 <IconSend className="w-4 h-4" />
               </Button>

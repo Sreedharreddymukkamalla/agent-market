@@ -7,13 +7,18 @@ export async function POST(req: NextRequest) {
 
   try {
     const headers: Record<string, string> = {};
+
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const transport = new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers } });
+    const transport = new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers },
+    });
     const client = new Client({ name: "agentaim-inspector", version: "1.0.0" });
+
     await client.connect(transport);
 
     const { tools } = await client.listTools();
+
     await client.close();
 
     return NextResponse.json({ items: tools });

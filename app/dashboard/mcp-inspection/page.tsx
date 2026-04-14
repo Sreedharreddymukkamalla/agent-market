@@ -1,5 +1,6 @@
-import { Suspense } from 'react';
-import MCPInspector from '../../../components/dashboard/mcp-inspection/MCPInspector';
+import { Suspense } from "react";
+
+import MCPInspector from "../../../components/dashboard/mcp-inspection/MCPInspector";
 
 export default function Page() {
   return (

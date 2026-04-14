@@ -22,7 +22,7 @@ export interface UserAgent {
   github_repo?: string;
   cloud_run_url?: string;
   github_username?: string;
-  status: 'active' | 'inactive' | 'paused' | 'deploying';
+  status: "active" | "inactive" | "paused" | "deploying";
   created_at: string;
   updated_at: string;
 }

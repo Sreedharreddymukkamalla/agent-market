@@ -13,8 +13,11 @@ export async function POST(req: NextRequest) {
 
     if (!cloudRunUrl || !appName || !userId || !sessionId) {
       return NextResponse.json(
-        { error: "Missing required fields: cloudRunUrl, appName, userId, sessionId" },
-        { status: 400 }
+        {
+          error:
+            "Missing required fields: cloudRunUrl, appName, userId, sessionId",
+        },
+        { status: 400 },
       );
     }
 
@@ -25,15 +28,16 @@ export async function POST(req: NextRequest) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
-        }
+        },
       );
 
       // 409 = already exists, treat as success
       if (!res.ok && res.status !== 409) {
         const errText = await res.text();
+
         return NextResponse.json(
           { error: `Session creation failed (${res.status}): ${errText}` },
-          { status: res.status }
+          { status: res.status },
         );
       }
 
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
       if (!message) {
         return NextResponse.json(
           { error: "Missing required field: message" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -64,22 +68,25 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errText = await res.text();
+
         return NextResponse.json(
           { error: `Agent error (${res.status}): ${errText}` },
-          { status: res.status }
+          { status: res.status },
         );
       }
 
       const events = await res.json();
+
       return NextResponse.json({ events });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (err: any) {
     console.error("ADK proxy error:", err);
+
     return NextResponse.json(
       { error: err.message ?? "Unexpected error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

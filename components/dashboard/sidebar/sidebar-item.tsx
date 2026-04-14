@@ -1,7 +1,8 @@
 import NextLink from "next/link";
 import React from "react";
-import { useSidebarContext } from "../layout-context";
 import clsx from "clsx";
+
+import { useSidebarContext } from "../layout-context";
 
 interface Props {
   title: string;
@@ -35,24 +36,33 @@ export const SidebarItem = ({
 
   return (
     <NextLink
-      href={href}
-      title={railIconOnly ? title : undefined}
       className={clsx(
         "text-default-900 no-underline active:bg-none",
-        railIconOnly ? "flex w-full justify-center px-0.5" : "max-w-full w-full",
+        railIconOnly
+          ? "flex w-full justify-center px-0.5"
+          : "max-w-full w-full",
       )}
+      href={href}
+      title={railIconOnly ? title : undefined}
+      onClick={handleClick}
     >
       <div
         className={clsx(
+          "relative",
           isActive
             ? "bg-[var(--sidebar-item-active)] text-[var(--sidebar-fg-active)]"
             : "text-default-600 hover:bg-[var(--sidebar-item-hover)]",
           railIconOnly
-            ? "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors duration-150"
-            : "flex min-h-8 w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-1 transition-colors duration-150",
+            ? "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors duration-150"
+            : "flex min-h-9 w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-1.5 transition-colors duration-150",
         )}
-        onClick={handleClick}
       >
+        {!railIconOnly && isActive ? (
+          <span
+            aria-hidden
+            className="absolute right-[-0.55rem] top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[var(--accent)]"
+          />
+        ) : null}
         <span
           className={clsx(
             "flex shrink-0 items-center justify-center [&_svg]:size-4",
@@ -66,9 +76,7 @@ export const SidebarItem = ({
         {!railIconOnly && (
           <span
             className={clsx(
-              isActive
-                ? "text-[var(--sidebar-fg-active)]"
-                : "text-default-900",
+              isActive ? "text-[var(--sidebar-fg-active)]" : "text-default-900",
               "font-medium text-sm",
             )}
           >

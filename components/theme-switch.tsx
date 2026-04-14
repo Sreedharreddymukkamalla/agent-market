@@ -26,7 +26,6 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className }) => {
 
   return (
     <button
-      type="button"
       aria-label={
         mounted
           ? `Switch to ${isLight ? "dark" : "light"} mode`
@@ -38,6 +37,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className }) => {
         "min-h-10 min-w-10",
         className,
       )}
+      type="button"
       onClick={handleToggle}
     >
       {mounted ? (
@@ -47,7 +47,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className }) => {
           <MoonFilledIcon size={22} />
         )
       ) : (
-        <span className="block h-[22px] w-[22px] shrink-0" aria-hidden />
+        <span aria-hidden className="block h-[22px] w-[22px] shrink-0" />
       )}
     </button>
   );

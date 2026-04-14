@@ -5,8 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export const maxDuration = 60;
 
-const ADK_BASE_URL =
-  "https://planner-agent-475756125529.us-central1.run.app";
+const ADK_BASE_URL = "https://planner-agent-475756125529.us-central1.run.app";
 const APP_NAME = "my_agent_new";
 
 export async function POST(request: Request) {
@@ -19,10 +18,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { 
+  let body: {
     messages?: { role: string; content: string }[];
     agentUrl?: string;
   };
+
   try {
     body = await request.json();
   } catch {
@@ -30,7 +30,8 @@ export async function POST(request: Request) {
   }
 
   const messages = body.messages ?? [];
-  const userMessage = messages.findLast((m) => m.role === "user")?.content ?? "";
+  const userMessage =
+    messages.findLast((m) => m.role === "user")?.content ?? "";
 
   if (!userMessage.trim()) {
     return Response.json({ error: "Empty message" }, { status: 400 });
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
 
   // 1. Create a new ADK session for this conversation turn
   let sessionId: string;
+
   try {
     const sessionRes = await fetch(
       `${activeAgentUrl}/apps/${activeAppName}/users/${userId}/sessions`,
@@ -53,13 +55,16 @@ export async function POST(request: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
-      }
+      },
     );
+
     if (!sessionRes.ok) {
       const text = await sessionRes.text();
+
       return new Response(`ADK session error: ${text}`, { status: 502 });
     }
     const sessionData = (await sessionRes.json()) as { id: string };
+
     sessionId = sessionData.id;
   } catch (e) {
     return new Response(`Failed to reach ADK service: ${String(e)}`, {
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
 
   // 2. Stream the ADK response via SSE → pipe plain text back to the client
   let adkRes: Response;
+
   try {
     adkRes = await fetch(`${activeAgentUrl}/run_sse`, {
       method: "POST",
@@ -92,6 +98,7 @@ export async function POST(request: Request) {
 
   if (!adkRes.ok || !adkRes.body) {
     const text = await adkRes.text().catch(() => adkRes.statusText);
+
     return new Response(`ADK error: ${text}`, { status: 502 });
   }
 
@@ -110,10 +117,12 @@ export async function POST(request: Request) {
 
         while (true) {
           const { done, value } = await reader.read();
+
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
+
           // Keep the last (potentially incomplete) line in the buffer
           buffer = lines.pop() ?? "";
 
@@ -121,9 +130,11 @@ export async function POST(request: Request) {
             if (line.startsWith("data: ")) {
               try {
                 const payload = line.slice(6);
+
                 if (payload === "[DONE]") continue;
 
                 const event = JSON.parse(payload);
+
                 if (event.content?.role !== "model") continue;
 
                 const fullText = (event.content.parts ?? [])
@@ -132,11 +143,13 @@ export async function POST(request: Request) {
 
                 if (fullText.length > lastSentText.length) {
                   const deltaContent = fullText.slice(lastSentText.length);
+
                   lastSentText = fullText;
 
                   const sseData = JSON.stringify({
                     choices: [{ delta: { content: deltaContent } }],
                   });
+
                   controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
                 }
               } catch (e) {
@@ -150,8 +163,10 @@ export async function POST(request: Request) {
         if (buffer.startsWith("data: ")) {
           try {
             const payload = buffer.slice(6);
+
             if (payload !== "[DONE]") {
               const event = JSON.parse(payload);
+
               if (event.content?.role === "model") {
                 const fullText = (event.content.parts ?? [])
                   .map((p: any) => p.text ?? "")
@@ -162,6 +177,7 @@ export async function POST(request: Request) {
                   const sseData = JSON.stringify({
                     choices: [{ delta: { content: deltaContent } }],
                   });
+
                   controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
                 }
               }
@@ -183,7 +199,7 @@ export async function POST(request: Request) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "X-Content-Type-Options": "nosniff",
     },
   });

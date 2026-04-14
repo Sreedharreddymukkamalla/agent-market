@@ -2,6 +2,7 @@
 
 import { Dropdown } from "@heroui/react";
 import React from "react";
+
 import { NotificationsIcon } from "../icons";
 
 export const NotificationsDropdown = () => {
@@ -14,8 +15,8 @@ export const NotificationsDropdown = () => {
         <NotificationsIcon className="shrink-0" size={22} />
       </Dropdown.Trigger>
       <Dropdown.Popover placement="bottom end">
-        <Dropdown.Menu className="w-80" aria-label="Notifications">
-          <Dropdown.Item className="py-2" key="1">
+        <Dropdown.Menu aria-label="Notifications" className="w-80">
+          <Dropdown.Item key="1" className="py-2">
             <div className="flex flex-col gap-1">
               <p className="font-medium text-sm">📣 Task Completed</p>
               <p className="text-xs text-default-500">

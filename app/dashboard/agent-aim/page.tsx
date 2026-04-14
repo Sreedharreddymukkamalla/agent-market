@@ -1,7 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Button,
   Dropdown,
@@ -9,14 +14,23 @@ import {
   Spinner,
   Tooltip,
   useOverlayState,
-  Avatar,
 } from "@heroui/react";
 import clsx from "clsx";
+import { Manrope } from "next/font/google";
+
+import { BurguerButton } from "@/components/dashboard/navbar/burguer-button";
 import { createClient } from "@/utils/supabase/client";
 
 type Role = "user" | "assistant";
 
-type Msg = { id: string; role: Role; content: string; images?: string[] };
+type Msg = {
+  id: string;
+  role: Role;
+  content: string;
+  images?: string[];
+  attachmentNames?: string[];
+  agentIds?: string[];
+};
 
 type ChatSession = {
   id: string;
@@ -32,14 +46,22 @@ type Agent = {
   description?: string;
 };
 
+type PendingUpload = {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+};
+
 const STORAGE_KEY = "agent-aim-chat-sessions-v1";
+const aimFont = Manrope({ subsets: ["latin"] });
 
 /** Set on redirect after auth so the first load focuses a new empty chat (query stripped on read). */
 const AIM_FRESH_LOGIN_QP = "aimFresh";
 
 /** Web Speech API (constructors not in all TS `dom` lib versions). */
 type WebSpeechRecognitionEvent = {
-  results: { length: number;[i: number]: { 0: { transcript: string } } };
+  results: { length: number; [i: number]: { 0: { transcript: string } } };
 };
 
 type WebSpeechRecognition = {
@@ -54,19 +76,24 @@ type WebSpeechRecognition = {
   onend: (() => void) | null;
 };
 
-function getSpeechRecognitionConstructor(): (new () => WebSpeechRecognition) | null {
+function getSpeechRecognitionConstructor():
+  | (new () => WebSpeechRecognition)
+  | null {
   if (typeof window === "undefined") return null;
   const w = window as Window & {
     SpeechRecognition?: new () => WebSpeechRecognition;
     webkitSpeechRecognition?: new () => WebSpeechRecognition;
   };
+
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 function sessionTitleFromMessages(messages: Msg[]): string {
   const first = messages.find((m) => m.role === "user" && m.content.trim());
+
   if (!first) return "New chat";
   const t = first.content.trim().replace(/\s+/g, " ");
+
   return t.length > 56 ? `${t.slice(0, 55)}…` : t;
 }
 
@@ -83,25 +110,33 @@ function formatSessionTime(ts: number): string {
   }
 }
 
-const IMAGE_REGEX = /(https?:\/\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(?:\?[^\s\)]*)?)|(https:\/\/storage\.googleapis\.com\/[^\s\)]+)/gi;
+const IMAGE_REGEX =
+  /(https?:\/\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(?:\?[^\s\)]*)?)|(https:\/\/storage\.googleapis\.com\/[^\s\)]+)/gi;
 
 function getImagesFromText(text: string): string[] {
   if (!text) return [];
   // Heal fragmented URLs: remove newlines that break a path
-  const healed = text.replace(/([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])\n\s*([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])/g, '$1$2');
+  const healed = text.replace(
+    /([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])\n\s*([a-zA-Z0-9\-\._~%:\/\?#\[\]@!$&'\(\)\*\+,;=])/g,
+    "$1$2",
+  );
+
   return healed.match(IMAGE_REGEX) || [];
 }
 
 function extractSseDelta(line: string): string | null {
   const trimmed = line.trim();
+
   if (!trimmed.startsWith("data:")) return null;
   const payload = trimmed.slice(5).trim();
+
   if (payload === "[DONE]") return null;
   try {
     const json = JSON.parse(payload) as {
       choices?: Array<{ delta?: { content?: string } }>;
     };
     const chunk = json.choices?.[0]?.delta?.content;
+
     return typeof chunk === "string" ? chunk : null;
   } catch {
     return null;
@@ -111,16 +146,16 @@ function extractSseDelta(line: string): string | null {
 function IconHistory({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={22}
-      height={22}
-      viewBox="0 0 24 24"
       fill="none"
+      height={22}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={22}
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
@@ -128,18 +163,38 @@ function IconHistory({ className }: { className?: string }) {
   );
 }
 
+function IconBell({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      className={className}
+      fill="none"
+      height={20}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.8}
+      viewBox="0 0 24 24"
+      width={20}
+    >
+      <path d="M15 17H5a2 2 0 01-2-2v-1l1.2-1.2c.52-.52.8-1.22.8-1.96V9a6 6 0 1112 0v1.84c0 .74.3 1.44.82 1.96L19 14v1a2 2 0 01-2 2h-2" />
+      <path d="M10 20a2 2 0 004 0" />
+    </svg>
+  );
+}
+
 function IconPlus({ className }: { className?: string }) {
   return (
     <svg
-      className={className}
-      width={22}
-      height={22}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
       aria-hidden
+      className={className}
+      fill="none"
+      height={22}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={22}
     >
       <path d="M12 5v14M5 12h14" />
     </svg>
@@ -149,16 +204,16 @@ function IconPlus({ className }: { className?: string }) {
 function IconMic({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
       fill="none"
+      height={20}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={20}
     >
       <path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z" />
       <path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4M8 22h8" />
@@ -169,15 +224,15 @@ function IconMic({ className }: { className?: string }) {
 function IconCloseRecording({ className }: { className?: string }) {
   return (
     <svg
-      className={className}
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
       aria-hidden
+      className={className}
+      fill="none"
+      height={20}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={20}
     >
       <path d="M18 6L6 18M6 6l12 12" />
     </svg>
@@ -202,10 +257,12 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
               0.45 *
               Math.abs(Math.sin(tick * 0.12 + i * 0.42)) *
               (0.55 + 0.45 * Math.sin(tick * 0.05 + i * 0.2));
+
             return 0.1 + wave;
           }),
         );
       }, 45);
+
       return () => clearInterval(id);
     }
 
@@ -218,6 +275,7 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
         ctx = new AudioContext();
         const src = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
+
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.72;
         src.connect(analyser);
@@ -228,17 +286,21 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
           analyser.getByteFrequencyData(buf);
           const step = Math.max(1, Math.floor(buf.length / VOICE_BAR_COUNT));
           const next: number[] = [];
+
           for (let i = 0; i < VOICE_BAR_COUNT; i++) {
             let sum = 0;
+
             for (let j = 0; j < step; j++) {
               sum += buf[i * step + j] ?? 0;
             }
             const avg = sum / step / 255;
+
             next.push(0.1 + Math.pow(avg, 0.65) * 0.9);
           }
           setHeights(next);
           raf = requestAnimationFrame(loop);
         };
+
         loop();
       } catch {
         /* show idle bars */
@@ -256,8 +318,8 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
 
   return (
     <div
-      className="flex min-h-[2.75rem] min-w-0 flex-1 items-center px-1"
       aria-hidden
+      className="flex min-h-[2.75rem] min-w-0 flex-1 items-center px-1"
     >
       <div className="flex h-10 min-w-0 flex-1 items-end justify-center gap-[2px] sm:gap-0.5">
         {heights.map((h, i) => (
@@ -277,16 +339,16 @@ function VoiceWaveform({ stream }: { stream: MediaStream | null }) {
 function IconSend({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
       fill="none"
+      height={18}
       stroke="currentColor"
-      strokeWidth={2.25}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={2.25}
+      viewBox="0 0 24 24"
+      width={18}
     >
       <path d="M12 19V5M5 12l7-7 7 7" />
     </svg>
@@ -296,16 +358,16 @@ function IconSend({ className }: { className?: string }) {
 function IconBack({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={22}
-      height={22}
-      viewBox="0 0 24 24"
       fill="none"
+      height={22}
       stroke="currentColor"
-      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={22}
     >
       <path d="M15 18l-6-6 6-6" />
     </svg>
@@ -315,12 +377,12 @@ function IconBack({ className }: { className?: string }) {
 function IconMore({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={20}
+      fill="currentColor"
       height={20}
       viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden
+      width={20}
     >
       <circle cx="5" cy="12" r="1.75" />
       <circle cx="12" cy="12" r="1.75" />
@@ -332,16 +394,16 @@ function IconMore({ className }: { className?: string }) {
 function IconShare({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
       fill="none"
+      height={18}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={18}
     >
       <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
     </svg>
@@ -351,20 +413,38 @@ function IconShare({ className }: { className?: string }) {
 function IconPhotosFiles({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
       fill="none"
+      height={20}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={20}
     >
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <path d="M21 15l-5-5L5 21" />
+      <path d="M21.44 11.05l-8.49 8.49a5.5 5.5 0 01-7.78-7.78l8.84-8.84a3.5 3.5 0 114.95 4.95l-8.49 8.48a1.5 1.5 0 01-2.12-2.12l7.78-7.78" />
+    </svg>
+  );
+}
+
+function IconFileCard({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      className={className}
+      fill="none"
+      height={18}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.9}
+      viewBox="0 0 24 24"
+      width={18}
+    >
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5M9 13h6M9 17h4" />
     </svg>
   );
 }
@@ -372,19 +452,19 @@ function IconPhotosFiles({ className }: { className?: string }) {
 function IconAgentsMenu({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
       fill="none"
+      height={20}
       stroke="currentColor"
-      strokeWidth={1.65}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.65}
+      viewBox="0 0 24 24"
+      width={20}
     >
       <path d="M12 8V4H8" />
-      <rect width="16" height="12" x="4" y="8" rx="2" />
+      <rect height="12" rx="2" width="16" x="4" y="8" />
       <path d="M9 14h.01M15 14h.01M9 18h6" />
     </svg>
   );
@@ -393,16 +473,16 @@ function IconAgentsMenu({ className }: { className?: string }) {
 function IconCheck({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={17}
-      height={17}
-      viewBox="0 0 24 24"
       fill="none"
+      height={17}
       stroke="currentColor"
-      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      width={17}
     >
       <path d="M20 6L9 17l-5-5" />
     </svg>
@@ -412,18 +492,18 @@ function IconCheck({ className }: { className?: string }) {
 function IconCopy({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={17}
-      height={17}
-      viewBox="0 0 24 24"
       fill="none"
+      height={17}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={17}
     >
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <rect height="14" rx="2" ry="2" width="14" x="8" y="8" />
       <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </svg>
   );
@@ -432,16 +512,16 @@ function IconCopy({ className }: { className?: string }) {
 function IconEditMessage({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={17}
-      height={17}
-      viewBox="0 0 24 24"
       fill="none"
+      height={17}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={17}
     >
       <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
     </svg>
@@ -451,16 +531,16 @@ function IconEditMessage({ className }: { className?: string }) {
 function IconTrash({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
       fill="none"
+      height={18}
       stroke="currentColor"
-      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={1.75}
+      viewBox="0 0 24 24"
+      width={18}
     >
       <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
     </svg>
@@ -470,16 +550,16 @@ function IconTrash({ className }: { className?: string }) {
 function IconChevronDown({ className }: { className?: string }) {
   return (
     <svg
+      aria-hidden
       className={className}
-      width={14}
-      height={14}
-      viewBox="0 0 24 24"
       fill="none"
+      height={14}
       stroke="currentColor"
-      strokeWidth={2.5}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+      width={14}
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -487,13 +567,15 @@ function IconChevronDown({ className }: { className?: string }) {
 }
 
 async function shareChatSession(s: ChatSession): Promise<void> {
-  const lines = s.messages.map((m) =>
-    `${m.role === "user" ? "You" : "Agent Aim"}: ${m.content}`,
+  const lines = s.messages.map(
+    (m) => `${m.role === "user" ? "You" : "Agent Aim"}: ${m.content}`,
   );
   const text = lines.filter(Boolean).join("\n\n") || s.title;
+
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({ title: s.title, text });
+
       return;
     }
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -509,16 +591,18 @@ function generateUUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
+
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0,
       v = c === "x" ? r : (r & 0x3) | 0x8;
+
     return v.toString(16);
   });
 }
 
 export default function AgentAimPage() {
-  const router = useRouter();
   const initialIdRef = useRef<string | null>(null);
+
   if (initialIdRef.current === null) {
     initialIdRef.current = generateUUID();
   }
@@ -544,36 +628,53 @@ export default function AgentAimPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState("");
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  
+
   // Dynamic Agent Selection
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentBarIds, setAgentBarIds] = useState<string[]>([]);
+  const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
+  const [quickAgentsOpen, setQuickAgentsOpen] = useState(false);
 
   const selectedAgent = useMemo(
     () => agents.find((a) => a.id === selectedAgentId),
     [agents, selectedAgentId],
+  );
+  const agentBarAgents = useMemo(
+    () =>
+      agentBarIds
+        .map((id) => agents.find((agent) => agent.id === id))
+        .filter((agent): agent is Agent => Boolean(agent)),
+    [agentBarIds, agents],
   );
 
   useEffect(() => {
     const fetchAgents = async () => {
       setAgentsLoading(true);
       const supabase = createClient();
+
       try {
         // Fetch from both tables
         const [myAgentsRes, marketAgentsRes] = await Promise.all([
-          supabase.from("adk_agents").select("id, name, cloud_run_url, description"),
-          supabase.from("agent_market").select("id, name, cloud_run_url, description"),
+          supabase
+            .from("adk_agents")
+            .select("id, name, cloud_run_url, description"),
+          supabase
+            .from("agent_market")
+            .select("id, name, cloud_run_url, description"),
         ]);
 
         const combined = [
           ...(myAgentsRes.data || []),
           ...(marketAgentsRes.data || []),
         ];
-        
+
         // Remove duplicates by ID or URL if necessary, but here we just combine
         setAgents(combined);
-        
+
         if (combined.length > 0) {
           setSelectedAgentId(combined[0].id);
         }
@@ -583,6 +684,7 @@ export default function AgentAimPage() {
         setAgentsLoading(false);
       }
     };
+
     fetchAgents();
   }, []);
 
@@ -599,8 +701,11 @@ export default function AgentAimPage() {
   const historyListRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const inlineEditTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const quickMenuRef = useRef<HTMLDivElement>(null);
+  const quickMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -621,6 +726,7 @@ export default function AgentAimPage() {
   const tearDownVoiceMedia = useCallback(() => {
     setVoiceStream((s) => {
       s?.getTracks().forEach((t) => t.stop());
+
       return null;
     });
     setListening(false);
@@ -628,6 +734,7 @@ export default function AgentAimPage() {
 
   const stopVoiceRecognition = useCallback(() => {
     const rec = recognitionRef.current;
+
     recognitionRef.current = null;
     try {
       rec?.stop();
@@ -645,6 +752,7 @@ export default function AgentAimPage() {
   const cancelVoiceInput = useCallback(() => {
     setInput(voiceInputPrefixRef.current);
     const rec = recognitionRef.current;
+
     recognitionRef.current = null;
     try {
       rec?.abort?.();
@@ -660,8 +768,10 @@ export default function AgentAimPage() {
 
   const confirmVoiceInput = useCallback(() => {
     const rec = recognitionRef.current;
+
     if (!rec) {
       tearDownVoiceMedia();
+
       return;
     }
     try {
@@ -675,6 +785,7 @@ export default function AgentAimPage() {
   useEffect(() => {
     return () => {
       const rec = recognitionRef.current;
+
       recognitionRef.current = null;
       try {
         rec?.abort?.();
@@ -688,20 +799,21 @@ export default function AgentAimPage() {
       }
       setVoiceStream((s) => {
         s?.getTracks().forEach((t) => t.stop());
+
         return null;
       });
     };
   }, []);
 
   useEffect(() => {
-    let startFreshAfterAuth = false;
     try {
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
+
         if (params.get(AIM_FRESH_LOGIN_QP) === "1") {
-          startFreshAfterAuth = true;
           params.delete(AIM_FRESH_LOGIN_QP);
           const q = params.toString();
+
           window.history.replaceState(
             null,
             "",
@@ -711,14 +823,17 @@ export default function AgentAimPage() {
       }
 
       const raw = localStorage.getItem(STORAGE_KEY);
+
       if (!raw) {
         setHydrated(true);
+
         return;
       }
       const data = JSON.parse(raw) as {
         sessions?: ChatSession[];
         activeId?: string;
       };
+
       if (
         Array.isArray(data.sessions) &&
         data.sessions.every(
@@ -730,15 +845,14 @@ export default function AgentAimPage() {
         )
       ) {
         const loaded = data.sessions.filter((s) => s.messages.length > 0);
+
         if (loaded.length === 0) {
           setHydrated(true);
+
           return;
         }
-        const preferred =
-          data.activeId && loaded.some((s) => s.id === data.activeId)
-            ? data.activeId
-            : loaded[0].id;
         const draftId = crypto.randomUUID();
+
         setSessions([
           ...loaded,
           {
@@ -748,7 +862,7 @@ export default function AgentAimPage() {
             updatedAt: Date.now(),
           },
         ]);
-        setActiveId(startFreshAfterAuth ? draftId : preferred);
+        setActiveId(draftId);
       }
     } catch {
       /* keep default */
@@ -765,6 +879,7 @@ export default function AgentAimPage() {
         activeSession && activeSession.messages.length > 0
           ? activeId
           : undefined;
+
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
@@ -789,6 +904,7 @@ export default function AgentAimPage() {
           if (s.id !== activeId) return s;
           const next =
             typeof updater === "function" ? updater(s.messages) : updater;
+
           return {
             ...s,
             messages: next,
@@ -811,24 +927,30 @@ export default function AgentAimPage() {
     setLoading(false);
   }, []);
 
-  const copyMessageText = useCallback(async (messageId: string, text: string) => {
-    if (!text) return;
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        if (copyFeedbackTimeoutRef.current) {
-          clearTimeout(copyFeedbackTimeoutRef.current);
+  const copyMessageText = useCallback(
+    async (messageId: string, text: string) => {
+      if (!text) return;
+      try {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard?.writeText
+        ) {
+          await navigator.clipboard.writeText(text);
+          if (copyFeedbackTimeoutRef.current) {
+            clearTimeout(copyFeedbackTimeoutRef.current);
+          }
+          setCopiedMessageId(messageId);
+          copyFeedbackTimeoutRef.current = setTimeout(() => {
+            setCopiedMessageId((id) => (id === messageId ? null : id));
+            copyFeedbackTimeoutRef.current = null;
+          }, 2000);
         }
-        setCopiedMessageId(messageId);
-        copyFeedbackTimeoutRef.current = setTimeout(() => {
-          setCopiedMessageId((id) => (id === messageId ? null : id));
-          copyFeedbackTimeoutRef.current = null;
-        }, 2000);
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    },
+    [],
+  );
 
   const cancelInlineEdit = useCallback(() => {
     setEditingMessageId(null);
@@ -839,10 +961,12 @@ export default function AgentAimPage() {
     if (loading || editingMessageId || recognitionRef.current) return;
 
     const Ctor = getSpeechRecognitionConstructor();
+
     if (!Ctor) {
       setError(
         "Voice input needs a supported browser (e.g. Chrome or Edge on desktop).",
       );
+
       return;
     }
 
@@ -850,6 +974,7 @@ export default function AgentAimPage() {
     voiceInputPrefixRef.current = input;
 
     let stream: MediaStream | null = null;
+
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
@@ -858,6 +983,7 @@ export default function AgentAimPage() {
     setVoiceStream(stream);
 
     const rec = new Ctor();
+
     rec.lang =
       (typeof navigator !== "undefined" && navigator.language) || "en-US";
     rec.interimResults = true;
@@ -865,6 +991,7 @@ export default function AgentAimPage() {
 
     rec.onresult = (event: WebSpeechRecognitionEvent) => {
       let spoken = "";
+
       for (let i = 0; i < event.results.length; i++) {
         spoken += event.results[i]?.[0]?.transcript ?? "";
       }
@@ -873,6 +1000,7 @@ export default function AgentAimPage() {
         prefix && spoken && !/\s$/.test(prefix) && !/^\s/.test(spoken)
           ? `${prefix} ${spoken}`
           : `${prefix}${spoken}`;
+
       setInput(combined);
     };
 
@@ -898,6 +1026,7 @@ export default function AgentAimPage() {
   const startInlineEdit = useCallback(
     (messageId: string) => {
       const msg = messages.find((m) => m.id === messageId);
+
       if (!msg || msg.role !== "user" || !msg.content.trim()) return;
       stop();
       stopVoiceRecognition();
@@ -912,6 +1041,7 @@ export default function AgentAimPage() {
     if (!editingMessageId) return;
     requestAnimationFrame(() => {
       const el = inlineEditTextareaRef.current;
+
       if (!el) return;
       el.focus();
       el.setSelectionRange(el.value.length, el.value.length);
@@ -937,6 +1067,7 @@ export default function AgentAimPage() {
       setLoading(true);
 
       const controller = new AbortController();
+
       abortRef.current = controller;
 
       try {
@@ -945,7 +1076,7 @@ export default function AgentAimPage() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           signal: controller.signal,
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             messages: apiMessages,
             agentUrl: selectedAgent?.cloud_run_url,
           }),
@@ -953,10 +1084,12 @@ export default function AgentAimPage() {
 
         if (!res.ok) {
           const errText = await res.text();
+
           updateActiveMessages((prev) =>
             prev.filter((m) => m.id !== assistantId),
           );
           setError(errText || `Request failed (${res.status})`);
+
           return;
         }
 
@@ -965,6 +1098,7 @@ export default function AgentAimPage() {
             prev.filter((m) => m.id !== assistantId),
           );
           setError("No response stream");
+
           return;
         }
 
@@ -974,13 +1108,16 @@ export default function AgentAimPage() {
 
         while (true) {
           const { done, value } = await reader.read();
+
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
+
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
             const delta = extractSseDelta(line);
+
             if (delta) {
               updateActiveMessages((prev) =>
                 prev.map((m) =>
@@ -995,12 +1132,11 @@ export default function AgentAimPage() {
 
         if (buffer.trim()) {
           const delta = extractSseDelta(buffer);
+
           if (delta) {
             updateActiveMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: m.content + delta }
-                  : m,
+                m.id === assistantId ? { ...m, content: m.content + delta } : m,
               ),
             );
           }
@@ -1021,18 +1157,28 @@ export default function AgentAimPage() {
 
   const confirmInlineEdit = useCallback(async () => {
     const text = editingDraft.trim();
+
     if (!editingMessageId || !text) return;
     const idx = messages.findIndex((m) => m.id === editingMessageId);
+
     if (idx === -1) return;
+
+    const originalMsg = messages[idx];
+
     stop();
     stopVoiceRecognition();
     setError(null);
     const before = messages.slice(0, idx);
+    const isOriginalUser = originalMsg?.role === "user";
     const userMsg: Msg = {
       id: generateUUID(),
       role: "user",
       content: text,
+      images: isOriginalUser ? originalMsg.images : undefined,
+      attachmentNames: isOriginalUser ? originalMsg.attachmentNames : undefined,
+      agentIds: isOriginalUser ? originalMsg.agentIds : undefined,
     };
+
     cancelInlineEdit();
     await runStreamChat([...before, userMsg]);
   }, [
@@ -1049,22 +1195,45 @@ export default function AgentAimPage() {
     if (editingMessageId) return;
     stopVoiceRecognition();
     const text = input.trim();
-    if (!text || loading) return;
+    const attachmentNames = pendingUploads.map((upload) => upload.name);
+    const imageUrls = pendingUploads
+      .filter((upload) => upload.type.startsWith("image/"))
+      .map((upload) => upload.url);
+    const nonImageNames = pendingUploads
+      .filter((upload) => !upload.type.startsWith("image/"))
+      .map((upload) => upload.name);
+    const content = [
+      text,
+      imageUrls.length > 0 ? imageUrls.join("\n") : "",
+      nonImageNames.length > 0
+        ? `[Attached files] ${nonImageNames.join(", ")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (!content || loading) return;
 
     setInput("");
+    setPendingUploads([]);
 
     const userMsg: Msg = {
       id: crypto.randomUUID(),
       role: "user",
-      content: text,
+      content,
+      images: imageUrls.length > 0 ? imageUrls : undefined,
+      attachmentNames: attachmentNames.length > 0 ? attachmentNames : undefined,
+      agentIds: agentBarIds.length > 0 ? [...agentBarIds] : undefined,
     };
 
     await runStreamChat([...messages, userMsg]);
   }, [
+    agentBarIds,
     editingMessageId,
     input,
     loading,
     messages,
+    pendingUploads,
     runStreamChat,
     stopVoiceRecognition,
   ]);
@@ -1074,18 +1243,24 @@ export default function AgentAimPage() {
     stopVoiceRecognition();
     setError(null);
     setInput("");
+    setPendingUploads([]);
     setEditingMessageId(null);
     setEditingDraft("");
     let nextActiveId: string | null = null;
+
     setSessions((prev) => {
       const nonEmpty = prev.filter((s) => s.messages.length > 0);
       const current = prev.find((s) => s.id === activeId);
+
       if (current && current.messages.length === 0) {
         nextActiveId = current.id;
+
         return [...nonEmpty, current];
       }
       const id = crypto.randomUUID();
+
       nextActiveId = id;
+
       return [
         ...nonEmpty,
         { id, title: "New chat", messages: [], updatedAt: Date.now() },
@@ -1106,12 +1281,14 @@ export default function AgentAimPage() {
     (id: string) => {
       stop();
       stopVoiceRecognition();
+      setPendingUploads([]);
       setEditingMessageId(null);
       setEditingDraft("");
       setSessions((prev) => {
         const nonEmpty = prev.filter((s) => s.messages.length > 0);
         const empties = prev.filter((s) => s.messages.length === 0);
         const oneDraft = empties.length ? [empties[empties.length - 1]] : [];
+
         return [...nonEmpty, ...oneDraft];
       });
       setActiveId(id);
@@ -1135,9 +1312,49 @@ export default function AgentAimPage() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !deleteDialog.isOpen) closeHistory();
     };
+
     window.addEventListener("keydown", onKey);
+
     return () => window.removeEventListener("keydown", onKey);
   }, [historyOpen, closeHistory, deleteDialog.isOpen]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      setQuickMenuOpen(false);
+      setQuickAgentsOpen(false);
+    }
+  }, [messages.length]);
+
+  useEffect(() => {
+    setAgentBarIds((prev) =>
+      prev.filter((id) => agents.some((agent) => agent.id === id)),
+    );
+  }, [agents]);
+
+  useEffect(() => {
+    if (!quickMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+
+      if (quickMenuRef.current?.contains(target)) return;
+      if (quickMenuTriggerRef.current?.contains(target)) return;
+      setQuickMenuOpen(false);
+      setQuickAgentsOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setQuickMenuOpen(false);
+      setQuickAgentsOpen(false);
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [quickMenuOpen]);
 
   const requestDelete = useCallback(
     (s: ChatSession) => {
@@ -1152,6 +1369,7 @@ export default function AgentAimPage() {
   const confirmDelete = useCallback(() => {
     if (!sessionToDelete) return;
     const deletedId = sessionToDelete.id;
+
     deleteDialog.close();
 
     setSessions((prev) => {
@@ -1159,13 +1377,13 @@ export default function AgentAimPage() {
       const fallback =
         next.length === 0
           ? [
-            {
-              id: crypto.randomUUID(),
-              title: "New chat",
-              messages: [],
-              updatedAt: Date.now(),
-            },
-          ]
+              {
+                id: crypto.randomUUID(),
+                title: "New chat",
+                messages: [],
+                updatedAt: Date.now(),
+              },
+            ]
           : next;
 
       setActiveId((aid) => (aid === deletedId ? fallback[0].id : aid));
@@ -1174,17 +1392,148 @@ export default function AgentAimPage() {
     });
   }, [sessionToDelete, deleteDialog]);
 
+  const applyAgentSelection = useCallback(
+    (nextAgentId: string) => {
+      if (!nextAgentId || nextAgentId === selectedAgentId) return;
+      setSelectedAgentId(nextAgentId);
+      const activeSession = sessions.find((s) => s.id === activeId);
+
+      if (activeSession && activeSession.messages.length > 0) {
+        const newId = crypto.randomUUID();
+
+        setSessions((prev) => [
+          ...prev,
+          {
+            id: newId,
+            title: "New chat",
+            messages: [],
+            updatedAt: Date.now(),
+          },
+        ]);
+        setActiveId(newId);
+      }
+    },
+    [activeId, selectedAgentId, sessions],
+  );
+
+  const pinAgentToBar = useCallback((agentId: string) => {
+    if (!agentId) return;
+    setAgentBarIds((prev) =>
+      prev.includes(agentId) ? prev : [...prev, agentId],
+    );
+  }, []);
+
+  const removeAgentFromBar = useCallback((agentId: string) => {
+    if (!agentId) return;
+    setAgentBarIds((prev) => {
+      const next = prev.filter((id) => id !== agentId);
+
+      setSelectedAgentId((current) =>
+        current === agentId ? (next[0] ?? null) : current,
+      );
+
+      return next;
+    });
+  }, []);
+
+  const removePendingUpload = useCallback((uploadId: string) => {
+    if (!uploadId) return;
+    setPendingUploads((prev) => {
+      const upload = prev.find((item) => item.id === uploadId);
+
+      if (upload) {
+        try {
+          URL.revokeObjectURL(upload.url);
+        } catch {
+          // Ignore failed revocations for stale object URLs.
+        }
+      }
+
+      return prev.filter((item) => item.id !== uploadId);
+    });
+  }, []);
+  const appendPendingUploads = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    setPendingUploads((prev) => [
+      ...prev,
+      ...files.map((file) => ({
+        id: crypto.randomUUID(),
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        url: URL.createObjectURL(file),
+      })),
+    ]);
+  }, []);
+  const handleComposerDragEnter = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (loading || !!editingMessageId) return;
+      if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragDepthRef.current += 1;
+      setIsDragActive(true);
+    },
+    [editingMessageId, loading],
+  );
+  const handleComposerDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (loading || !!editingMessageId) return;
+      if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "copy";
+      if (!isDragActive) setIsDragActive(true);
+    },
+    [editingMessageId, isDragActive, loading],
+  );
+  const handleComposerDragLeave = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (loading || !!editingMessageId) return;
+      if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) {
+        setIsDragActive(false);
+      }
+    },
+    [editingMessageId, loading],
+  );
+  const handleComposerDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (loading || !!editingMessageId) return;
+      if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragDepthRef.current = 0;
+      setIsDragActive(false);
+      appendPendingUploads(Array.from(e.dataTransfer.files || []));
+    },
+    [appendPendingUploads, editingMessageId, loading],
+  );
+
+  const hasMessages = messages.length > 0;
+
+  const timelineMessages = messages.filter(
+    (m) => m.content.trim().length > 0 || m.role === "assistant",
+  );
+  const agentNameById = useMemo(
+    () => new Map(agents.map((agent) => [agent.id, agent.name])),
+    [agents],
+  );
+
   const toolbarBtn =
     "flex h-10 w-10 items-center justify-center rounded-full text-foreground/75 transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground dark:hover:bg-white/10";
-
+  const topUtilityBtn =
+    "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-divider/70 bg-[var(--surface)] text-foreground/75 transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground";
   const voiceChromeBtn =
     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-white/10";
 
-  const composerSection = (
-    <div className="mx-auto w-full max-w-3xl">
+  const composerSection = () => (
+    <div className="mx-auto w-full max-w-[44rem]">
       {listening ? (
-        <span id="agent-aim-voice-status" className="sr-only">
-          Recording — speak, then press done or cancel.
+        <span className="sr-only" id="agent-aim-voice-status">
+          Recording - speak, then press done or cancel.
         </span>
       ) : (
         <label className="sr-only" htmlFor="agent-aim-input">
@@ -1193,110 +1542,174 @@ export default function AgentAimPage() {
       )}
       <input
         ref={fileInputRef}
-        type="file"
-        className="hidden"
+        aria-hidden
         multiple
-        accept="image/*"
+        accept=".pdf,.doc,.docx,.txt,.csv,.ppt,.pptx,image/*"
+        className="hidden"
+        tabIndex={-1}
+        type="file"
         onChange={(e) => {
           const files = Array.from(e.target.files || []);
-          const imageUrls = files
-            .filter((f) => f.type.startsWith("image/"))
-            .map((f) => URL.createObjectURL(f));
-          if (imageUrls.length > 0) {
-            // Append images to input for now? Or handle in send?
-            // For now let's just alert or log as a placeholder for full upload
-            console.log("Selected images:", imageUrls);
-            // In a real app, we'd upload these and then add URLs to the message
-            setInput((prev) => prev + (prev ? " " : "") + imageUrls.join(" "));
-          }
+          appendPendingUploads(files);
+          e.currentTarget.value = "";
         }}
-        aria-hidden
-        tabIndex={-1}
       />
       <div
         className={clsx(
-          "flex min-h-[3.25rem] items-center gap-1 rounded-full border px-1.5 py-1.5 pl-2",
+          "flex gap-1 rounded-2xl border px-1.5 py-1",
           listening
-            ? "border-zinc-200/90 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_4px_16px_-4px_rgba(0,0,0,0.06)] dark:border-white/12 dark:bg-zinc-900 dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)]"
+            ? "min-h-[3.4rem] border-zinc-200/90 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_4px_16px_-4px_rgba(0,0,0,0.06)] dark:border-white/12 dark:bg-zinc-900 dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.5)]"
             : clsx(
-              "border-divider bg-[var(--surface)]",
-              "shadow-[0_12px_40px_-12px_rgba(0,0,0,0.14),0_4px_16px_-6px_rgba(0,0,0,0.08)]",
-              "dark:border-white/[0.08] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.06)]",
-            ),
+                pendingUploads.length > 0 || agentBarAgents.length > 0
+                  ? "min-h-[3.4rem] items-end"
+                  : "min-h-[2.95rem] items-center",
+                "border-divider bg-[var(--surface)]",
+                "shadow-[0_16px_44px_-24px_rgba(14,21,47,0.35),0_8px_20px_-14px_rgba(17,24,39,0.2)]",
+                "dark:border-white/[0.08] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.06)]",
+              ),
+          isDragActive &&
+            "border-[#9ecbff] bg-[#f4f9ff] ring-2 ring-[#9ecbff]/45",
         )}
+        onDragEnter={handleComposerDragEnter}
+        onDragLeave={handleComposerDragLeave}
+        onDragOver={handleComposerDragOver}
+        onDrop={handleComposerDrop}
       >
-        <Dropdown>
-          <Dropdown.Trigger
+        <div
+          className={clsx(
+            "relative shrink-0",
+            pendingUploads.length > 0 || agentBarAgents.length > 0
+              ? "self-end"
+              : "self-center",
+          )}
+        >
+          <button
+            ref={quickMenuTriggerRef}
+            aria-expanded={quickMenuOpen}
+            aria-label="Add photos, files, or agents"
             className={clsx(
-              "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full outline-none transition-colors",
-              "data-[pressed=true]:opacity-90",
+              "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full outline-none transition-colors",
               listening
                 ? "text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-white/10"
-                : clsx(
-                  "text-foreground/80 hover:bg-[var(--sidebar-item-hover)] hover:text-foreground",
-                ),
+                : "text-foreground/80 hover:bg-[var(--sidebar-item-hover)] hover:text-foreground",
             )}
-            aria-label="Add photos, files, or agents"
+            type="button"
+            onClick={() => {
+              setQuickMenuOpen((prev) => {
+                const next = !prev;
+
+                if (!next) setQuickAgentsOpen(false);
+
+                return next;
+              });
+            }}
           >
             <IconPlus className={listening ? "" : "opacity-90"} />
-          </Dropdown.Trigger>
-          <Dropdown.Popover
-            placement="top start"
-            offset={10}
-            className="rounded-2xl border border-divider bg-[var(--overlay)] p-1 shadow-[var(--overlay-shadow)]"
-          >
-            <Dropdown.Menu
-              aria-label="Add to message"
-              className="min-w-[13.5rem] gap-0.5 rounded-xl p-1"
+          </button>
+          {quickMenuOpen ? (
+            <div
+              ref={quickMenuRef}
+              className={clsx(
+                "absolute left-0 z-40 flex gap-2",
+                hasMessages
+                  ? "items-end bottom-[calc(100%+0.75rem)]"
+                  : "items-start top-[calc(100%+0.75rem)]",
+              )}
             >
-              <Dropdown.Item
-                key="files"
-                className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
-                textValue="Add photos and files"
-                onPress={() => fileInputRef.current?.click()}
-              >
-                <span className="flex items-center gap-3">
-                  <IconPhotosFiles className="shrink-0 text-default-600 dark:text-default-400" />
-                  <span className="text-sm font-medium text-default-900">
-                    Add photos &amp; files
+              <div className="min-w-[13.5rem] rounded-2xl border border-divider bg-[var(--overlay)] p-1 shadow-[var(--overlay-shadow)]">
+                <button
+                  className="group flex w-full items-center gap-3 rounded-xl py-2.5 pl-2 pr-3 text-left text-sm font-medium text-default-900 transition-colors hover:bg-[#eef6ff] hover:text-[#0a63ff]"
+                  type="button"
+                  onClick={() => {
+                    setQuickMenuOpen(false);
+                    setQuickAgentsOpen(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <IconPhotosFiles className="shrink-0 text-default-600 transition-colors group-hover:text-[#0a63ff] dark:text-default-400" />
+                  <span>Add photos &amp; files</span>
+                </button>
+                <button
+                  className="group flex w-full items-center justify-between rounded-xl py-2.5 pl-2 pr-3 text-left text-sm font-medium text-default-900 transition-colors hover:bg-[#eef6ff] hover:text-[#0a63ff]"
+                  type="button"
+                  onClick={() => setQuickAgentsOpen((prev) => !prev)}
+                >
+                  <span className="flex items-center gap-3">
+                    <IconAgentsMenu className="shrink-0 text-default-600 transition-colors group-hover:text-[#0a63ff] dark:text-default-400" />
+                    <span>Add agents</span>
                   </span>
-                </span>
-              </Dropdown.Item>
-              <Dropdown.Item
-                key="agents"
-                className="cursor-pointer rounded-xl py-2.5 pl-2 pr-3 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
-                textValue="Agents"
-                onPress={() => router.push("/agent-market")}
-              >
-                <span className="flex items-center gap-3">
-                  <IconAgentsMenu className="shrink-0 text-default-600 dark:text-default-400" />
-                  <span className="text-sm font-medium text-default-900">
-                    Agents
-                  </span>
-                </span>
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown>
+                  <IconChevronDown
+                    className={clsx(
+                      "h-3.5 w-3.5 transition-transform transition-colors group-hover:text-[#0a63ff]",
+                      quickAgentsOpen ? "rotate-90" : "-rotate-90",
+                    )}
+                  />
+                </button>
+              </div>
+              {quickAgentsOpen ? (
+                <div className="min-w-[12.75rem] rounded-2xl border border-divider bg-[var(--overlay)] p-1 shadow-[var(--overlay-shadow)]">
+                  <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-default-500">
+                    Available Agents
+                  </p>
+                  <div className="flex max-h-60 flex-col gap-0.5 overflow-y-auto pr-0.5">
+                    {agents.map((agent) => (
+                      <button
+                        key={agent.id}
+                        className={clsx(
+                          "flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-sm transition-colors",
+                          agentBarIds.includes(agent.id)
+                            ? "bg-[var(--sidebar-item-active)] text-default-900"
+                            : "text-default-800 hover:bg-[#eef6ff] hover:text-[#0a63ff]",
+                        )}
+                        type="button"
+                        onClick={() => {
+                          applyAgentSelection(agent.id);
+                          pinAgentToBar(agent.id);
+                          setQuickAgentsOpen(false);
+                          setQuickMenuOpen(false);
+                        }}
+                      >
+                        <span className="line-clamp-1">{agent.name}</span>
+                        {agentBarIds.includes(agent.id) ? (
+                          <IconCheck className="h-3.5 w-3.5" />
+                        ) : null}
+                      </button>
+                    ))}
+                    {agentsLoading ? (
+                      <div className="flex items-center gap-2 px-2.5 py-2 text-xs text-default-500">
+                        <Spinner size="sm" /> Loading agents...
+                      </div>
+                    ) : null}
+                    {!agentsLoading && agents.length === 0 ? (
+                      <p className="px-2.5 py-2 text-xs text-default-500">
+                        No agents found.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         {listening ? (
           <>
             <VoiceWaveform stream={voiceStream} />
             <div className="flex shrink-0 items-center gap-0 pr-0.5">
               <button
-                type="button"
                 aria-label="Cancel voice input"
-                title="Cancel"
                 className={voiceChromeBtn}
+                title="Cancel"
+                type="button"
                 onClick={cancelVoiceInput}
               >
                 <IconCloseRecording />
               </button>
               <button
-                type="button"
                 aria-label="Done recording"
-                title="Done"
                 className={voiceChromeBtn}
+                title="Done"
+                type="button"
                 onClick={confirmVoiceInput}
               >
                 <IconCheck />
@@ -1305,58 +1718,126 @@ export default function AgentAimPage() {
           </>
         ) : (
           <>
-            <textarea
-              ref={composerTextareaRef}
-              id="agent-aim-input"
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send();
-                }
-              }}
-              placeholder="Ask anything"
-              disabled={loading || !!editingMessageId}
-              className="min-h-[2.75rem] max-h-40 flex-1 resize-none bg-transparent px-2 py-2.5 text-[15px] leading-snug text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-            />
-
+            <div className="min-w-0 flex-1">
+              {pendingUploads.length > 0 ? (
+                <div className="-ml-9 mb-1.5 mt-0.5 flex flex-wrap gap-2 pt-0">
+                  {pendingUploads.map((upload) => (
+                    <div
+                      key={upload.id}
+                      className="flex w-fit max-w-[min(34rem,94%)] items-center gap-2 rounded-2xl border border-divider bg-white px-2 py-2"
+                    >
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0a8fff] text-white">
+                        <IconFileCard className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-1 block text-sm font-semibold text-default-900">
+                          {upload.name}
+                        </span>
+                        <span className="line-clamp-1 block text-xs text-default-500">
+                          {upload.type.startsWith("image/") ? "Image" : "Document"}
+                        </span>
+                      </span>
+                      <button
+                        aria-label={`Remove ${upload.name}`}
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black text-[11px] font-bold leading-none text-white transition-opacity hover:opacity-90"
+                        type="button"
+                        onClick={() => removePendingUpload(upload.id)}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <textarea
+                ref={composerTextareaRef}
+                className={clsx(
+                  "max-h-40 w-full resize-none bg-transparent px-2 py-2.5 text-[15px] leading-snug text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50",
+                  agentBarAgents.length > 0 || pendingUploads.length > 0
+                    ? "min-h-[2.2rem]"
+                    : "min-h-[2.75rem]",
+                )}
+                disabled={loading || !!editingMessageId}
+                id="agent-aim-input"
+                placeholder="Ask anything..."
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send();
+                  }
+                }}
+              />
+              {agentBarAgents.length > 0 ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1 px-2 pb-1">
+                  {agentBarAgents.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className="inline-flex items-center gap-1 rounded-xl border border-[#cfe3ff] bg-[#eef6ff] px-3 py-1.5 text-[11px] font-semibold text-black"
+                    >
+                      <button
+                        className="inline-flex items-center gap-1 text-black"
+                        type="button"
+                        onClick={() => setSelectedAgentId(agent.id)}
+                      >
+                        <IconAgentsMenu className="h-3.5 w-3.5 text-black" />
+                        <span className="line-clamp-1 max-w-[12rem]">
+                          {agent.name}
+                        </span>
+                      </button>
+                      <button
+                        aria-label={`Remove ${agent.name}`}
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold leading-none text-black transition-colors hover:bg-black/10"
+                        type="button"
+                        onClick={() => removeAgentFromBar(agent.id)}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div className="flex shrink-0 items-center gap-0.5 pr-0.5">
               {loading ? (
                 <button
-                  type="button"
                   className="rounded-full px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-foreground"
+                  type="button"
                   onClick={stop}
                 >
                   Stop
                 </button>
               ) : null}
               <button
-                type="button"
+                aria-label="Voice input"
                 className={clsx(
-                  "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+                  "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
                   "text-foreground/80 hover:bg-[var(--sidebar-item-hover)] hover:text-foreground",
                   "disabled:cursor-not-allowed disabled:opacity-40",
                 )}
-                aria-label="Voice input"
                 disabled={loading || !!editingMessageId}
-                title="Speak to type (uses your browser’s speech recognition)"
+                title="Speak to type (uses your browser's speech recognition)"
+                type="button"
                 onClick={() => void startVoiceInput()}
               >
                 <IconMic />
               </button>
               <button
-                type="button"
                 aria-label="Send message"
-                disabled={loading || !!editingMessageId || !input.trim()}
-                onClick={() => void send()}
                 className={clsx(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-opacity",
                   "bg-[var(--accent)] text-[var(--accent-foreground)] shadow-sm",
-                  "disabled:cursor-not-allowed disabled:opacity-35",
-                  "hover:opacity-90",
+                  "disabled:cursor-not-allowed disabled:opacity-35 hover:opacity-90",
                 )}
+                disabled={
+                  loading ||
+                  !!editingMessageId ||
+                  (!input.trim() && pendingUploads.length === 0)
+                }
+                type="button"
+                onClick={() => void send()}
               >
                 <IconSend />
               </button>
@@ -1368,124 +1849,65 @@ export default function AgentAimPage() {
   );
 
   return (
-    <div className="-m-6 flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--background)]">
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div
+      className={clsx(
+        aimFont.className,
+        "-m-4 md:-m-8 flex min-h-0 flex-1 flex-col overflow-hidden bg-[#fbfdff] dark:bg-[var(--background)]",
+      )}
+    >
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#fbfdff] dark:bg-[var(--background)]">
         <div
-          className="pointer-events-none absolute left-4 top-4 z-10 flex gap-1 sm:left-6 sm:top-5 md:left-8"
           aria-hidden={false}
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 border-b border-divider/70 bg-[#fbfdff]/96 backdrop-blur-sm dark:bg-[var(--background)]/92"
         >
-          <div className="pointer-events-auto flex items-center">
-            <Dropdown>
-              <Dropdown.Trigger
-                className="h-10 gap-2 rounded-full px-3 font-semibold hover:bg-[var(--sidebar-item-hover)] group border-none flex items-center cursor-pointer outline-none transition-colors text-foreground/90"
-                aria-label="Select Agent"
+          <div className="flex h-14 items-center justify-between px-4 sm:px-8 md:justify-end">
+            <div className="pointer-events-auto md:hidden">
+              <BurguerButton variant="navbar" />
+            </div>
+            <div className="pointer-events-auto flex items-center gap-1.5">
+              <button
+                aria-label="Notifications"
+                className={topUtilityBtn}
+                type="button"
               >
-                <IconAgentsMenu className="h-5 w-5 shrink-0 text-default-600 dark:text-default-400" />
-                <span className="max-w-[120px] truncate text-sm">
-                  {selectedAgent?.name || "Select Agent"}
-                </span>
-                <IconChevronDown className="opacity-50 group-data-[pressed=true]:rotate-180 transition-transform" />
-              </Dropdown.Trigger>
-              <Dropdown.Popover
-                placement="bottom start"
-                className="min-w-[200px] rounded-2xl border border-divider bg-[var(--overlay)] p-1 shadow-[var(--overlay-shadow)]"
+                <IconBell />
+              </button>
+              <button
+                aria-label="Chat history"
+                className={topUtilityBtn}
+                type="button"
+                onClick={openHistory}
               >
-                <Dropdown.Menu
-                  aria-label="Agent selection"
-                  disallowEmptySelection
-                  selectionMode="single"
-                  selectedKeys={selectedAgentId ? new Set([selectedAgentId]) : new Set([])}
-                  onSelectionChange={(keys) => {
-                    if (keys !== "all") {
-                      const key = Array.from(keys)[0] as string;
-                      if (key && key !== selectedAgentId) {
-                        setSelectedAgentId(key);
-                        // Reset chat if current session has history
-                        const activeSession = sessions.find((s) => s.id === activeId);
-                        if (activeSession && activeSession.messages.length > 0) {
-                          const newId = crypto.randomUUID();
-                          setSessions((prev) => [
-                            ...prev,
-                            {
-                              id: newId,
-                              title: "New chat",
-                              messages: [],
-                              updatedAt: Date.now(),
-                            },
-                          ]);
-                          setActiveId(newId);
-                        }
-                      }
-                    }
-                  }}
-                  className="gap-1 p-1"
-                >
-                  {agents.map((agent) => (
-                    <Dropdown.Item
-                      key={agent.id}
-                      id={agent.id}
-                      textValue={agent.name}
-                      className="rounded-xl py-2 data-[hovered=true]:bg-[var(--sidebar-item-hover)]"
-                    >
-                       <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-default-900">{agent.name}</span>
-                        {agent.description && (
-                          <span className="text-[10px] text-default-500 line-clamp-1">{agent.description}</span>
-                        )}
-                      </div>
-                    </Dropdown.Item>
-                  ))}
-                  {agents.length === 0 && (
-                     <Dropdown.Item key="no-agents" isDisabled className="text-default-400">
-                      No agents found
-                    </Dropdown.Item>
-                  )}
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
+                <IconHistory className="h-4 w-4" />
+              </button>
+              <button
+                aria-label="New chat"
+                className={topUtilityBtn}
+                type="button"
+                onClick={newChat}
+              >
+                <IconPlus className="h-4 w-4" />
+              </button>
+              <button
+                className="rounded-lg bg-foreground px-3 py-2 text-xs font-semibold text-background shadow-sm transition-opacity hover:opacity-90"
+                type="button"
+              >
+                Upgrade
+              </button>
+            </div>
           </div>
         </div>
 
-        <div
-          className="pointer-events-none absolute right-4 top-4 z-10 flex gap-1 sm:right-6 sm:top-5"
-          aria-hidden={false}
-        >
-          <div className="pointer-events-auto flex gap-1">
-            <button
-              type="button"
-              className={toolbarBtn}
-              aria-label="Chat history"
-              onClick={openHistory}
-            >
-              <IconHistory />
-            </button>
-            <button
-              type="button"
-              className={toolbarBtn}
-              aria-label="New chat"
-              onClick={newChat}
-            >
-              <IconPlus />
-            </button>
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-14 sm:px-8">
-          {messages.length === 0 ? (
-            <div className="flex min-h-full flex-col items-center justify-center gap-8 px-2 py-8 text-center sm:gap-10">
-              <div>
-                <h2 className="text-[1.65rem] font-semibold tracking-tight text-default-900 sm:text-3xl">
-                  Hello there!
-                </h2>
-                <p className="mt-2 max-w-md text-base text-muted-foreground sm:text-lg">
-                  Agent Aim is here to help
-                </p>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#fbfdff] px-4 pb-4 pt-16 dark:bg-[var(--background)] sm:px-8">
+          {!hasMessages ? (
+            <div className="flex min-h-full flex-col items-center justify-center bg-[#fbfdff] px-2 py-10 dark:bg-[var(--background)]">
+              <div className="mx-auto w-full max-w-3xl">
+                {composerSection()}
               </div>
-              {composerSection}
             </div>
           ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-4 pb-6 pt-2">
-              {messages.map((m) => {
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 pb-6 pt-2">
+              {timelineMessages.map((m) => {
                 const copyable =
                   m.role === "assistant"
                     ? m.content.length > 0
@@ -1493,6 +1915,35 @@ export default function AgentAimPage() {
                 const isEditingUser =
                   m.role === "user" && editingMessageId === m.id;
                 const copied = copiedMessageId === m.id;
+                const attachedAgentNames = (m.agentIds ?? [])
+                  .map((id) => agentNameById.get(id))
+                  .filter((name): name is string => Boolean(name));
+                const detectedUserImageUrls =
+                  m.role === "user"
+                    ? Array.from(
+                        new Set([...(m.images || []), ...getImagesFromText(m.content)]),
+                      )
+                    : [];
+                const attachedFileNames =
+                  m.role === "user"
+                    ? (m.attachmentNames?.length
+                        ? m.attachmentNames
+                        : detectedUserImageUrls.map(
+                            (_url, idx) => `Image ${idx + 1}`,
+                          ))
+                    : [];
+                const hasAttachedFiles =
+                  m.role === "user" && attachedFileNames.length > 0;
+                const visibleUserContent =
+                  m.role === "user"
+                    ? m.content
+                        .replace(IMAGE_REGEX, "")
+                        .replace(/\[Attached files\][^\n]*/g, "")
+                        .trim()
+                    : m.content;
+                const hasAttachedAgents =
+                  m.role === "user" && attachedAgentNames.length > 0;
+
                 return (
                   <div
                     key={m.id}
@@ -1513,7 +1964,10 @@ export default function AgentAimPage() {
                         </label>
                         <textarea
                           ref={inlineEditTextareaRef}
+                          className="min-h-[4.5rem] w-full resize-y bg-transparent text-sm leading-relaxed text-default-900 outline-none placeholder:text-default-400 dark:text-default-100"
+                          disabled={loading}
                           id={`edit-msg-${m.id}`}
+                          rows={4}
                           value={editingDraft}
                           onChange={(e) => setEditingDraft(e.target.value)}
                           onKeyDown={(e) => {
@@ -1526,29 +1980,26 @@ export default function AgentAimPage() {
                               void confirmInlineEdit();
                             }
                           }}
-                          rows={4}
-                          disabled={loading}
-                          className="min-h-[4.5rem] w-full resize-y bg-transparent text-sm leading-relaxed text-default-900 outline-none placeholder:text-default-400 dark:text-default-100"
                         />
                         <div className="mt-3 flex flex-wrap justify-end gap-2">
                           <button
-                            type="button"
-                            onClick={cancelInlineEdit}
                             className={clsx(
                               "rounded-full border border-divider bg-[var(--background)] px-4 py-2 text-sm font-medium",
                               "text-default-900 shadow-sm transition-colors hover:bg-default-100 dark:hover:bg-white/10",
                             )}
+                            type="button"
+                            onClick={cancelInlineEdit}
                           >
                             Cancel
                           </button>
                           <button
-                            type="button"
-                            disabled={!editingDraft.trim() || loading}
-                            onClick={() => void confirmInlineEdit()}
                             className={clsx(
                               "rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm",
                               "transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40",
                             )}
+                            disabled={!editingDraft.trim() || loading}
+                            type="button"
+                            onClick={() => void confirmInlineEdit()}
                           >
                             Send
                           </button>
@@ -1558,38 +2009,99 @@ export default function AgentAimPage() {
                       <>
                         <div
                           className={clsx(
-                            "max-w-full rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap",
+                            "whitespace-pre-wrap",
                             m.role === "user"
-                              ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
-                              : "border border-divider bg-[var(--surface)] text-default-900 shadow-sm",
+                              ? "w-fit max-w-[min(92%,56rem)] rounded-[2rem] border border-[#d7e9fb] bg-[#eef7ff] px-5 py-3 text-sm font-medium leading-relaxed text-default-900 shadow-sm"
+                              : "w-full rounded-none border-0 bg-transparent px-0 py-0 text-[1.02rem] leading-8 text-default-900 shadow-none",
                           )}
                         >
-                          {m.content ||
+                          {hasAttachedAgents ? (
+                            <>
+                              {visibleUserContent ? (
+                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-default-800">
+                                  {visibleUserContent}
+                                </p>
+                              ) : null}
+                              {hasAttachedFiles ? (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {attachedFileNames.map((fileName, idx) => (
+                                    <span
+                                      key={`${m.id}-file-${fileName}-${idx}`}
+                                      className="inline-flex items-center rounded-md border border-[#cfe3ff] bg-[#eef6ff] px-2 py-0.5 text-[10px] font-semibold text-black"
+                                    >
+                                      {fileName}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {attachedAgentNames.map((agentName, idx) => (
+                                  <span
+                                    key={`${m.id}-${agentName}-${idx}`}
+                                    className={clsx(
+                                      "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em]",
+                                      idx % 3 === 0
+                                        ? "border-orange-200 bg-orange-100/80 text-orange-700"
+                                        : idx % 3 === 1
+                                          ? "border-emerald-200 bg-emerald-100/80 text-emerald-700"
+                                          : "border-blue-200 bg-blue-100/80 text-blue-700",
+                                    )}
+                                  >
+                                    {agentName}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            (m.role === "user" ? visibleUserContent : m.content) ||
                             (m.role === "assistant" && loading ? (
                               <span className="inline-flex items-center gap-2 text-muted-foreground">
                                 <Spinner size="sm" /> Thinking…
                               </span>
-                            ) : null)}
+                            ) : null)
+                          )}
+                          {!hasAttachedAgents && hasAttachedFiles ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {attachedFileNames.map((fileName, idx) => (
+                                <span
+                                  key={`${m.id}-file-standalone-${fileName}-${idx}`}
+                                  className="inline-flex items-center rounded-md border border-[#cfe3ff] bg-[#eef6ff] px-2 py-0.5 text-[10px] font-semibold text-black"
+                                >
+                                  {fileName}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
 
                           {/* Render images from content or Msg.images */}
                           {(() => {
+                            if (m.role === "user") return null;
                             const detectedUrls = getImagesFromText(m.content);
-                            const combined = Array.from(new Set([...(m.images || []), ...detectedUrls]));
+                            const combined = Array.from(
+                              new Set([...(m.images || []), ...detectedUrls]),
+                            );
+
                             if (combined.length === 0) return null;
 
                             return (
                               <div className="mt-3 flex flex-col gap-3">
                                 {combined.map((url, idx) => (
-                                  <div key={idx} className="overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5 min-h-[40px] flex items-center justify-center">
+                                  <div
+                                    key={idx}
+                                    className="overflow-hidden rounded-lg border border-divider/50 shadow-sm bg-black/5 min-h-[40px] flex items-center justify-center"
+                                  >
                                     <img
-                                      src={url}
                                       alt="Attachment"
                                       className="max-w-full h-auto object-contain block hover:scale-[1.02] transition-transform duration-300"
                                       loading="lazy"
+                                      src={url}
                                       onError={(e) => {
                                         // If we're loading, the URL might still be incomplete
                                         if (!loading) {
-                                          (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                                          (
+                                            e.target as HTMLImageElement
+                                          ).parentElement!.style.display =
+                                            "none";
                                         }
                                       }}
                                     />
@@ -1611,13 +2123,11 @@ export default function AgentAimPage() {
                           >
                             <Tooltip>
                               <Tooltip.Trigger
-                                aria-label={
-                                  copied ? "Copied" : "Copy message"
-                                }
+                                aria-label={copied ? "Copied" : "Copy message"}
                                 className={clsx(
                                   msgActionBtn,
                                   copied &&
-                                  "bg-default-200 text-default-900 dark:bg-white/15",
+                                    "bg-default-200 text-default-900 dark:bg-white/15",
                                 )}
                                 onClick={() =>
                                   void copyMessageText(m.id, m.content)
@@ -1625,12 +2135,12 @@ export default function AgentAimPage() {
                               >
                                 {copied ? <IconCheck /> : <IconCopy />}
                               </Tooltip.Trigger>
-                                <Tooltip.Content
-                                  className={clsx(
-                                    "rounded-full border-0 bg-[var(--accent)] px-3 py-1.5 text-xs font-medium",
-                                    "text-[var(--accent-foreground)] shadow-lg",
-                                  )}
-                                >
+                              <Tooltip.Content
+                                className={clsx(
+                                  "rounded-full border-0 bg-[var(--accent)] px-3 py-1.5 text-xs font-medium",
+                                  "text-[var(--accent-foreground)] shadow-lg",
+                                )}
+                              >
                                 {copied ? "Copied" : "Copy message"}
                               </Tooltip.Content>
                             </Tooltip>
@@ -1671,14 +2181,14 @@ export default function AgentAimPage() {
           </div>
         )}
 
-        {messages.length > 0 ? (
+        {hasMessages ? (
           <div
             className={clsx(
               "shrink-0 border-t border-transparent px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3",
               "bg-[var(--background)]/95 backdrop-blur-md sm:px-8 sm:pb-8",
             )}
           >
-            {composerSection}
+            {composerSection()}
           </div>
         ) : null}
       </div>
@@ -1686,47 +2196,47 @@ export default function AgentAimPage() {
       {historyOpen ? (
         <>
           <button
-            type="button"
-            className="fixed inset-0 z-[300] bg-[var(--scrim)]"
             aria-label="Close chat history"
+            className="fixed inset-0 z-[300] bg-[var(--scrim)]"
+            type="button"
             onClick={closeHistory}
           />
           <div
+            aria-labelledby="agent-aim-history-title"
+            aria-modal="true"
             className="fixed right-0 top-0 z-[301] flex h-full w-full max-w-md flex-col rounded-l-2xl border-l border-divider bg-[var(--surface-secondary)] shadow-2xl sm:my-2 sm:mr-2 sm:h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-1rem)]"
             role="dialog"
-            aria-modal="true"
-            aria-labelledby="agent-aim-history-title"
           >
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-divider px-3 py-3">
               <div className="flex items-center gap-0.5">
                 <button
-                  type="button"
-                  className={toolbarBtn}
                   aria-label="Back"
+                  className={toolbarBtn}
+                  type="button"
                   onClick={closeHistory}
                 >
                   <IconBack />
                 </button>
                 <button
-                  type="button"
-                  className={toolbarBtn}
                   aria-label="New chat"
+                  className={toolbarBtn}
+                  type="button"
                   onClick={newChat}
                 >
                   <IconPlus />
                 </button>
               </div>
               <h2
-                id="agent-aim-history-title"
                 className="text-center text-base font-semibold text-default-900"
+                id="agent-aim-history-title"
               >
                 Chat history
               </h2>
               <button
-                type="button"
-                className={clsx(toolbarBtn, "justify-self-end")}
                 aria-label="Scroll to most recent"
+                className={clsx(toolbarBtn, "justify-self-end")}
                 title="Most recent first"
+                type="button"
                 onClick={() =>
                   historyListRef.current?.scrollTo({
                     top: 0,
@@ -1759,9 +2269,9 @@ export default function AgentAimPage() {
                         )}
                       >
                         <button
+                          className="min-w-0 flex-1 px-3 py-3 text-left"
                           type="button"
                           onClick={() => selectSession(s.id)}
-                          className="min-w-0 flex-1 px-3 py-3 text-left"
                         >
                           <span className="line-clamp-2 text-sm font-medium text-default-900">
                             {s.title}
@@ -1773,11 +2283,8 @@ export default function AgentAimPage() {
                         <div className="flex shrink-0 items-center pr-1">
                           <Dropdown>
                             <Dropdown.Trigger
-                              className={clsx(
-                                toolbarBtn,
-                                "text-foreground/80",
-                              )}
                               aria-label={`Options for ${s.title}`}
+                              className={clsx(toolbarBtn, "text-foreground/80")}
                             >
                               <IconMore />
                             </Dropdown.Trigger>
@@ -1795,8 +2302,8 @@ export default function AgentAimPage() {
                                 </Dropdown.Item>
                                 <Dropdown.Item
                                   key="delete"
-                                  textValue="Delete"
                                   className="text-danger data-[hovered=true]:bg-danger/10"
+                                  textValue="Delete"
                                   onPress={() => requestDelete(s)}
                                 >
                                   <span className="flex items-center gap-2 text-sm text-danger">
@@ -1818,8 +2325,8 @@ export default function AgentAimPage() {
             <div className="shrink-0 border-t border-divider bg-[var(--surface)] p-4">
               <Button
                 fullWidth
-                variant="primary"
                 className="rounded-xl py-3 font-semibold"
+                variant="primary"
                 onPress={newChatFromHistory}
               >
                 New Chat
@@ -1832,11 +2339,7 @@ export default function AgentAimPage() {
       {/* Container must be nested inside Backdrop so both portal to document.body; siblings break positioning */}
       <Modal.Root state={deleteDialog}>
         <Modal.Backdrop className="z-[420]">
-          <Modal.Container
-            placement="center"
-            size="md"
-            className="min-h-0"
-          >
+          <Modal.Container className="min-h-0" placement="center" size="md">
             <Modal.Dialog className="border border-divider shadow-xl">
               <Modal.Header>
                 <Modal.Heading className="text-lg font-semibold text-default-900">
@@ -1845,21 +2348,22 @@ export default function AgentAimPage() {
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm leading-relaxed text-default-700">
-                  Are you sure you want to delete the chat &quot;{deleteChatLabel}
+                  Are you sure you want to delete the chat &quot;
+                  {deleteChatLabel}
                   &quot;? This action cannot be undone.
                 </p>
               </Modal.Body>
               <Modal.Footer className="flex flex-row justify-end gap-2 pt-2">
                 <Button
-                  variant="secondary"
                   className="rounded-xl border border-divider"
+                  variant="secondary"
                   onPress={() => deleteDialog.close()}
                 >
                   Cancel
                 </Button>
                 <Button
-                  variant="danger"
                   className="rounded-xl font-semibold"
+                  variant="danger"
                   onPress={confirmDelete}
                 >
                   Delete
